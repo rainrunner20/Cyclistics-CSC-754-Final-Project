@@ -1,0 +1,4 @@
+# Keep third-party binaries out of Git, including unpublished course packages.
+*
+!.gitignore
+!README.md
