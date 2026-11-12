@@ -1,0 +1,15 @@
+# Isolated atomic-model smoke tests, not the course DEVSJAVA runtime.
+# Build context: devsjava/ (Docker Desktop on Windows supported).
+FROM eclipse-temurin:17-jdk-jammy
+WORKDIR /workspace
+COPY src/main/java/ src/main/java/
+COPY test_support/src/ test_support/src/
+RUN mkdir -p /workspace/build && \
+    javac -d /workspace/build \
+      test_support/src/GenCol/entity.java \
+      test_support/src/genDevs/modeling/content.java \
+      test_support/src/genDevs/modeling/message.java \
+      test_support/src/simView/ViewableAtomic.java \
+      src/main/java/org/cyclistics/devs/LaneBottleneck.java \
+      test_support/src/org/cyclistics/devs/LaneBottleneckSmokeTests.java
+CMD ["java", "-cp", "/workspace/build", "org.cyclistics.devs.LaneBottleneckSmokeTests"]
