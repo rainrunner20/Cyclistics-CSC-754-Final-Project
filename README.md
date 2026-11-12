@@ -3,7 +3,6 @@
 **Reproducible simulation of bicycle-lane obstructions and cyclist delays**<br>
 *CSC 754 — Topics in System Simulation · College of Staten Island*
 
-`Python 3.11+` · `Docker-ready` · `CI workflow included` · `Research prototype v0.2.0`
 
 Cyclistics investigates how bicycle-lane obstructions, cyclist arrival intensity, and hypothetical clearance policies influence **simulated** queueing, waiting time, and bottleneck throughput. The long-term architecture combines **DEVSJAVA discrete-event models** with a **NetLogo agent-based cycling model** and selected NYC transportation datasets.
 
