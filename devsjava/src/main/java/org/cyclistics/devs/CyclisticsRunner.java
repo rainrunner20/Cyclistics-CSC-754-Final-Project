@@ -1,6 +1,8 @@
 package org.cyclistics.devs;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import model.simulation.coordinator;
 
 /**
@@ -26,6 +28,14 @@ public final class CyclisticsRunner {
         simulator.initialize();
         simulator.simulate(30); // maximum coordinator iterations, not seconds
 
+        // Print a machine-readable trace from completed INTERNAL transitions.
+        // This is the result of the real DEVS coordinator driving the model.
+        List<LaneBottleneck.Departure> departures = model.lane().departureTrace();
+        for (LaneBottleneck.Departure event : departures) {
+            System.out.printf(Locale.ROOT, "DEPARTURE,%.3f,%s%n",
+                    event.timeSeconds(), event.cyclistId());
+        }
+
         System.out.println("Cyclistics coupled-DEVS summary:");
         System.out.println("  generated=" + model.generator().emittedCount());
         System.out.println("  obstruction events=" + model.obstructions().firedEvents());
@@ -39,10 +49,24 @@ public final class CyclisticsRunner {
                 || model.lane().maxWaitingQueue() != 1
                 || model.lane().waitingCount() != 0
                 || model.lane().isBlocked()
-                || model.lane().isServing()) {
+                || model.lane().isServing()
+                || departures.size() != 2) {
             throw new AssertionError("Coupled DEVS results differ from the deterministic scenario");
         }
-        System.out.println("PASS: coupled models executed and two cyclists departed.");
-        System.out.println("NOTE: timestamp trace, library/course-version check, and Python comparison remain pending.");
+        requireDeparture(departures.get(0), "cyclist-1", 14.0);
+        requireDeparture(departures.get(1), "cyclist-2", 24.0);
+        System.out.println("PASS: real coordinator departure timestamps match 14s and 24s.");
+        System.out.println("NOTE: Python independently checks the same deterministic fixture;"
+                + " field validation and course-library equivalence are still pending.");
+    }
+
+    private static void requireDeparture(LaneBottleneck.Departure actual,
+                                         String expectedId, double expectedSeconds) {
+        if (!expectedId.equals(actual.cyclistId())
+                || Math.abs(actual.timeSeconds() - expectedSeconds) > 1e-9) {
+            throw new AssertionError("Unexpected departure " + actual.cyclistId()
+                    + " at " + actual.timeSeconds() + "s; expected "
+                    + expectedId + " at " + expectedSeconds + "s");
+        }
     }
 }

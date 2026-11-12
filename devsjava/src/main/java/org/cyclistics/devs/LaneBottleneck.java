@@ -2,6 +2,9 @@ package org.cyclistics.devs;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import GenCol.entity;
 import model.modeling.content;
@@ -15,8 +18,8 @@ import view.modeling.ViewableAtomic;
  * finishes the current service interval. The interval is the time needed
  * to pass this bottleneck, not the time needed for an entire bike trip.
  *
- * This class is tested with our TEST-ONLY DEVSJAVA adapter for now.
- * A real DEVSJAVA coordinator and course library are still needed.
+ * Local event-time bookkeeping gives us an auditable departure trace.
+ * The external DEVS coordinator still determines when to invoke transitions.
  */
 public final class LaneBottleneck extends ViewableAtomic {
     private final double passageSeconds;
@@ -26,6 +29,22 @@ public final class LaneBottleneck extends ViewableAtomic {
     private boolean blocked;
     private int departed;
     private int maxWaiting;
+    private double logicalSeconds;
+    private double scheduledDepartureSeconds;
+    private final List<Departure> departures = new ArrayList<>();
+
+    /** Immutable output record for an actual completed passage. */
+    public static final class Departure {
+        private final String cyclistId;
+        private final double timeSeconds;
+
+        public Departure(String cyclistId, double timeSeconds) {
+            this.cyclistId = cyclistId;
+            this.timeSeconds = timeSeconds;
+        }
+        public String cyclistId() { return cyclistId; }
+        public double timeSeconds() { return timeSeconds; }
+    }
 
     public LaneBottleneck(String name, double passageSeconds) {
         super(name);
@@ -47,6 +66,9 @@ public final class LaneBottleneck extends ViewableAtomic {
         blocked = false;
         departed = 0;
         maxWaiting = 0;
+        logicalSeconds = 0.0;
+        scheduledDepartureSeconds = Double.NaN;
+        departures.clear();
         passivate();
     }
 
@@ -65,14 +87,24 @@ public final class LaneBottleneck extends ViewableAtomic {
         if (inService == null) {
             throw new IllegalStateException("no cyclist is currently being served");
         }
+        // The active passage's absolute completion time was fixed when it
+        // started; recording it here does not depend on coordinator logging.
+        if (!Double.isFinite(scheduledDepartureSeconds)
+                || scheduledDepartureSeconds + 1e-9 < logicalSeconds) {
+            throw new IllegalStateException("departure timer disagrees with model time");
+        }
+        logicalSeconds = scheduledDepartureSeconds;
+        departures.add(new Departure(inService.getName(), logicalSeconds));
         departed++;
         inService = null;
+        scheduledDepartureSeconds = Double.NaN;
         passivate();
     }
 
     private void startNextIfFree() {
         if (!blocked && inService == null && !waiting.isEmpty()) {
             inService = waiting.removeFirst();
+            scheduledDepartureSeconds = logicalSeconds + passageSeconds;
             holdIn("serving", passageSeconds);
         }
     }
@@ -128,6 +160,9 @@ public final class LaneBottleneck extends ViewableAtomic {
         // Do not restart an in-progress passage when a new cyclist or
         // blockage arrives; DEVS deducts the elapsed time from sigma.
         Continue(elapsed);
+        // The coordinator passes elapsed time since the last transition.
+        // This includes time spent passivated while the lane was idle.
+        logicalSeconds += elapsed;
         applyInputs(inputs);
     }
 
@@ -138,6 +173,11 @@ public final class LaneBottleneck extends ViewableAtomic {
         // can begin. This makes the simultaneous-event rule explicit.
         finishPassage();
         applyInputs(inputs);
+    }
+
+    /** A read-only copy in departure order (FIFO). */
+    public List<Departure> departureTrace() {
+        return Collections.unmodifiableList(new ArrayList<>(departures));
     }
 
     public int waitingCount() { return waiting.size(); }
