@@ -1,0 +1,15 @@
+services:
+  simulation:
+    build:
+      context: .
+    image: cyclistics:local
+    volumes:
+      - ./outputs:/app/outputs
+    command: ["python", "-m", "cyclistics", "--output-dir", "/app/outputs"]
+
+  tests:
+    build:
+      context: .
+    image: cyclistics:local
+    profiles: ["test"]
+    command: ["python", "-m", "unittest", "discover", "-s", "tests", "-v"]

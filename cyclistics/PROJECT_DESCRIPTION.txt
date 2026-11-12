@@ -1,0 +1,11 @@
+GITHUB ABOUT DESCRIPTION:
+Cyclistics — Docker-ready bike-lane obstruction simulation, exploring queueing and cyclist delay with discrete-event modeling. Python baseline; DEVSJAVA + NetLogo planned.
+
+GITHUB TOPICS:
+python docker simulation discrete-event-simulation agent-based-modeling netlogo devs smart-cities transportation
+
+RESUME BULLET — TRUE FOR CURRENT PROTOTYPE:
+Built a Docker-ready Python discrete-event simulation prototype of bicycle-lane obstructions, with reproducible seeded scenarios, event-list scheduling, CSV metrics, automated tests, and CI workflows.
+
+RESUME BULLET — USE ONLY AFTER IMPLEMENTING THE PLANNED FEATURES:
+Extended a bicycle-lane obstruction simulator with formal DEVSJAVA atomic/coupled models and a NetLogo ABM to study rider behavior, congestion, and clearance-policy sensitivities.

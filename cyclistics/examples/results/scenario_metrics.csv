@@ -1,0 +1,5 @@
+scenario,arrivals,completed_all,completed_by_horizon,mean_wait_s,p95_wait_s,max_waiting_queue,throughput_per_hour_during_horizon,assumed_freeflow_travel_s,mean_estimated_travel_s
+clear_lane,169,169,169,0.636,2.955,2,338.0,20,20.636
+blocked_5min,169,169,169,34.642,203.854,28,338.0,20,54.642
+faster_clearance_1min,169,169,169,1.8,3.819,4,338.0,20,21.8
+repeat_blockages,169,169,169,9.53,65.883,11,338.0,20,29.53

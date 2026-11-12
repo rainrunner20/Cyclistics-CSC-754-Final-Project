@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: CLI smoke test
+        run: cyclistics --rate 300 --seed 754 --output-dir outputs/ci
+      - name: Check CSV output
+        run: python -c "from pathlib import Path; assert Path('outputs/ci/scenario_metrics.csv').is_file()"
+
+  docker:
+    name: Docker smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build --tag cyclistics:ci .
+      - name: Run tests in image
+        run: docker run --rm cyclistics:ci python -m unittest discover -s tests -v
+      - name: Run simulator in image
+        run: docker run --rm cyclistics:ci
