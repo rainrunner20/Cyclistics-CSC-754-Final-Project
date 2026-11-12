@@ -1,0 +1,14 @@
+{
+  "source": "Synthetic training fixture (not NYC sensor measurements)",
+  "dataset": "counts",
+  "dataset_id": "ct66-47at",
+  "sensor_id": "demo-sensor",
+  "retrieved_at_utc": null,
+  "record_count": 4,
+  "records": [
+    {"sensor_id": "demo-sensor", "travelmode": "Bicycle", "timestamp": "2026-10-15T08:00:00", "granularity": "Hour", "direction": "Total", "flowid": "demo-total", "status": "demo", "counts": "240"},
+    {"sensor_id": "demo-sensor", "travelmode": "Bicycle", "timestamp": "2026-10-15T09:00:00", "granularity": "Hour", "direction": "Total", "flowid": "demo-total", "status": "demo", "counts": "360"},
+    {"sensor_id": "demo-sensor", "travelmode": "Bicycle", "timestamp": "2026-10-15T10:00:00", "granularity": "Hour", "direction": "Total", "flowid": "demo-total", "status": "demo", "counts": "300"},
+    {"sensor_id": "demo-sensor", "travelmode": "Bicycle", "timestamp": "2026-10-15T11:00:00", "granularity": "Hour", "direction": "Total", "flowid": "demo-total", "status": "demo", "counts": "300"}
+  ]
+}

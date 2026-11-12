@@ -81,13 +81,11 @@ def validate_records(dataset: str, rows: object) -> list[dict]:
     return rows
 
 
-def fetch_sample(dataset: str, limit: int = 5, token: str | None = None) -> dict:
-    """Download a bounded sample and save enough context to reproduce it."""
-    url = build_url(dataset, limit)
+def request_json(url: str, token: str | None = None) -> object:
+    """Request a JSON endpoint using the same retry rules for both pipelines."""
     headers = {"Accept": "application/json", "User-Agent": "Cyclistics-research/0.2"}
 
-    # An app token is optional for this first step. When supplied, put it in a
-    # header, not in the saved URL, so we don't leak it in output files.
+    # The token never appears in the URL or the saved output file.
     app_token = token if token is not None else os.getenv("SOCRATA_APP_TOKEN")
     if app_token:
         headers["X-App-Token"] = app_token
@@ -95,25 +93,25 @@ def fetch_sample(dataset: str, limit: int = 5, token: str | None = None) -> dict
 
     for attempt in range(3):
         try:
-            # A timeout prevents a stalled API request from hanging forever.
             with urlopen(request, timeout=20) as response:
-                payload = json.load(response)
-            break
+                return json.load(response)
         except HTTPError as exc:
-            # Retry rate limits and temporary server errors, not every error.
             if exc.code not in RETRYABLE_STATUS or attempt == 2:
                 raise RuntimeError(f"NYC Open Data request failed with HTTP {exc.code}") from exc
         except (URLError, TimeoutError) as exc:
             if attempt == 2:
                 detail = exc.reason if isinstance(exc, URLError) else exc
                 raise RuntimeError(f"NYC Open Data network error: {detail}") from exc
-
-        # Wait slightly longer after each failed attempt (1s, then 2s).
         time.sleep(min(2**attempt, 4))
 
-    records = validate_records(dataset, payload)
+    raise AssertionError("Unreachable retry branch")
+
+
+def fetch_sample(dataset: str, limit: int = 5, token: str | None = None) -> dict:
+    """Download a bounded sample and save enough context to reproduce it."""
+    url = build_url(dataset, limit)
+    records = validate_records(dataset, request_json(url, token))
     return {
-        # These metadata fields help us remember which data produced a result.
         "source": "NYC Open Data / NYC Department of Transportation",
         "dataset": dataset,
         "dataset_id": DATASETS[dataset]["id"],
