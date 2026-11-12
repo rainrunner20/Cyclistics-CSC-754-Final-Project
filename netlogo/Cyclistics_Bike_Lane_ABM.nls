@@ -1,0 +1,178 @@
+;; Cyclistics - NetLogo ABM, milestone 3.1A
+;; One tick = one simulated second. One patch ~ one unit of lane distance.
+;; This is an independent agent-based prototype, NOT a live DEVS co-simulation.
+;; No real observed cyclist trajectories or crash-risk predictions are used.
+
+breed [cyclists cyclist]
+breed [trucks truck]
+
+cyclists-own [
+  free-speed               ;; patches per tick: each rider has an individual speed
+  stop-ticks               ;; whole seconds spent completely stopped
+  waiting?                 ;; changed every tick by that rider's local rule
+]
+
+globals [
+  requested-arrivals       ;; stochastic cyclist demand created so far
+  arrival-draws            ;; fixed, seeded Bernoulli draws for fair scenarios
+  pending-arrivals         ;; people waiting to enter if the spawn area is occupied
+  departed-count           ;; cyclists that have exited the modeled lane
+  total-completed-stop     ;; stop-ticks for riders who have exited only
+  obstruction-active?      ;; whether a truck occupies the bottleneck
+  queue-now                ;; fully stopped riders + pending entrants
+  max-queue                ;; largest observed queue-now
+]
+
+to setup
+  clear-all
+  random-seed seed-value
+  set-default-shape cyclists "bicycle"
+  set-default-shape trucks "truck"
+  ask patches [
+    ifelse pycor = 0
+      [ set pcolor sky ]
+      [ ifelse abs pycor = 1
+          [ set pcolor gray + 2 ]
+          [ set pcolor gray - 1 ] ]
+  ]
+  set requested-arrivals 0
+  ;; Pre-sample arrivals before any riders or trucks are created. Otherwise
+  ;; truck creation or different queue lengths can change the RNG sequence.
+  ;; Fixed seed + fixed input rate => identical demand in clear/blocked runs.
+  set arrival-draws (n-values run-length [ i -> random-float 1 ])
+  set pending-arrivals 0
+  set departed-count 0
+  set total-completed-stop 0
+  set obstruction-active? false
+  set queue-now 0
+  set max-queue 0
+  reset-ticks
+  update-obstruction
+end
+
+to go
+  if ticks >= run-length [ stop ]
+  update-obstruction
+  request-arrival
+  admit-pending-cyclist
+
+  ;; Front-to-back order lets each follower observe the updated front rider.
+  ;; This keeps riders from passing each other in our single-lane model.
+  ask (sort-on [(- xcor)] cyclists) [ move-cyclist ]
+
+  set queue-now (pending-arrivals + count (cyclists with [waiting?]))
+  set max-queue (max (list max-queue queue-now))
+  tick
+end
+
+to update-obstruction
+  let scheduled? (blockage-enabled = 1 and
+    ticks >= blockage-start and
+    ticks < (blockage-start + blockage-duration))
+  if scheduled? != obstruction-active? [
+    set obstruction-active? scheduled?
+    ifelse obstruction-active? [
+      ask patches with [pycor = 0 and pxcor >= 6 and pxcor <= 7] [
+        set pcolor orange
+      ]
+      create-trucks 1 [
+        setxy 6.5 0
+        set size 2
+        set heading 90
+        set color red
+      ]
+    ] [
+      ask trucks [ die ]
+      ask patches with [pycor = 0 and pxcor >= 6 and pxcor <= 7] [
+        set pcolor sky
+      ]
+    ]
+  ]
+end
+
+to request-arrival
+  ;; Bernoulli demand: expected arrivals per tick = cyclists/hour / 3600.
+  ;; This is synthetic traffic, even if a later experiment picks a NYC-based rate.
+  if (item ticks arrival-draws) < (arrival-rate-per-hour / 3600) [
+    set requested-arrivals requested-arrivals + 1
+    set pending-arrivals pending-arrivals + 1
+  ]
+end
+
+to admit-pending-cyclist
+  if pending-arrivals > 0 [
+    ;; Don't draw two cyclists on top of one another at the western entrance.
+    if not any? (cyclists with [xcor < (min-pxcor + 1)]) [
+      create-cyclists 1 [
+        setxy min-pxcor 0
+        set heading 90
+        set color blue
+        set size 1.2
+        set free-speed (0.7 + random-float 0.6)
+        set stop-ticks 0
+        set waiting? false
+      ]
+      set pending-arrivals pending-arrivals - 1
+    ]
+  ]
+end
+
+to move-cyclist  ;; cyclist context only
+  let possible-step free-speed
+
+  ;; A rider checks the nearest rider in front (a simple local interaction).
+  let rider-ahead min-one-of (other cyclists with [
+    xcor > [xcor] of myself
+  ]) [ xcor ]
+  if rider-ahead != nobody [
+    set possible-step (min (list possible-step
+      ([xcor] of rider-ahead - xcor - 0.85)))
+  ]
+
+  ;; A truck prevents NEW riders entering x > 5. Riders who passed the
+  ;; stop line before it arrived may finish, as in our DEVS example.
+  if obstruction-active? and xcor <= 5 [
+    set possible-step (min (list possible-step (5 - xcor)))
+  ]
+
+  ;; Never travel beyond the model's non-wrapping eastern edge.
+  set possible-step (max (list 0
+    (min (list possible-step (max-pxcor - xcor)))))
+
+  set waiting? (possible-step < 0.01)
+  ifelse waiting? [
+    set stop-ticks stop-ticks + 1
+    set color yellow
+  ] [
+    set xcor xcor + possible-step
+    set color blue
+  ]
+
+  if xcor >= (max-pxcor - 0.001) [
+    set total-completed-stop total-completed-stop + stop-ticks
+    set departed-count departed-count + 1
+    die
+  ]
+end
+
+to-report mean-stop-completed
+  if departed-count = 0 [ report 0 ]
+  report (total-completed-stop / departed-count)
+end
+
+to-report conservation-ok?
+  ;; This identity should hold every tick, including with an entrance backlog.
+  report requested-arrivals = (pending-arrivals + count cyclists + departed-count)
+end
+
+to run-headless-scenario
+  setup
+  repeat run-length [ go ]
+  show (word "requested=" requested-arrivals
+    " departed=" departed-count
+    " active=" count cyclists
+    " pending=" pending-arrivals
+    " peak-queue=" max-queue
+    " mean-stop-completed=" (precision mean-stop-completed 3))
+  if not conservation-ok? [ error "Cyclist conservation failed" ]
+end
