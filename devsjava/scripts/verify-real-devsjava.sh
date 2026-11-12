@@ -17,9 +17,10 @@ fi
 # All imported framework classes must come from external JARs.
 required=(
     'GenCol/entity.class'
-    'genDevs/modeling/message.class'
-    'genDevs/modeling/content.class'
-    'simView/ViewableAtomic.class'
+    'model/modeling/message.class'
+    'model/modeling/content.class'
+    'view/modeling/ViewableAtomic.class'
+    'model/simulation/coordinator.class'
 )
 missing=0
 for class_name in "${required[@]}"; do
@@ -39,8 +40,8 @@ for class_name in "${required[@]}"; do
 done
 
 if (( missing )); then
-    echo "ERROR: This set of JARs does not expose the imports our models use." >&2
-    echo "A newer DEVS-Suite release may use different package names." >&2
+    echo "ERROR: This set of JARs does not expose the DEVS-Suite 2.1 classes our models expect." >&2
+    echo "Confirm the library version and packages using jar tf/javap." >&2
     exit 3
 fi
 

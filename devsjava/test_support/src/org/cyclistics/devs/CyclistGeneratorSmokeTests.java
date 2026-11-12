@@ -2,8 +2,8 @@ package org.cyclistics.devs;
 
 import java.util.Arrays;
 import java.util.Collections;
-import genDevs.modeling.content;
-import genDevs.modeling.message;
+import model.modeling.content;
+import model.modeling.message;
 import GenCol.entity;
 
 /**
@@ -44,7 +44,7 @@ public final class CyclistGeneratorSmokeTests {
         equal(generator.ta(), 10.0, "First arrival scheduled at second 10");
         expect("scheduled".equals(generator.getPhase()), "Generator should be active");
         expect(generator.out().getLength() == 1, "First arrival output is present");
-        expect("arrival".equals(generator.out().getPortName(0)), "Output uses the arrival port");
+        expect("arrival".equals(generator.out().read(0).getPortName()), "Output uses the arrival port");
         expect("cyclist-1".equals(generator.out().getValOnPort("arrival", 0).getName()), "First cyclist ID");
 
         // In DEVS, output happens before the internal transition at the same time.

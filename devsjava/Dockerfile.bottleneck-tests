@@ -7,9 +7,9 @@ COPY test_support/src/ test_support/src/
 RUN mkdir -p /workspace/build && \
     javac -d /workspace/build \
       test_support/src/GenCol/entity.java \
-      test_support/src/genDevs/modeling/content.java \
-      test_support/src/genDevs/modeling/message.java \
-      test_support/src/simView/ViewableAtomic.java \
+      test_support/src/model/modeling/content.java \
+      test_support/src/model/modeling/message.java \
+      test_support/src/view/modeling/ViewableAtomic.java \
       src/main/java/org/cyclistics/devs/LaneBottleneck.java \
       test_support/src/org/cyclistics/devs/LaneBottleneckSmokeTests.java
 CMD ["java", "-cp", "/workspace/build", "org.cyclistics.devs.LaneBottleneckSmokeTests"]

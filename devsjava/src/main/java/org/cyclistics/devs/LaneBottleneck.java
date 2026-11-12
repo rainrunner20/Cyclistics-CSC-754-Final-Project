@@ -4,8 +4,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 import GenCol.entity;
-import genDevs.modeling.message;
-import simView.ViewableAtomic;
+import model.modeling.content;
+import model.modeling.message;
+import view.modeling.ViewableAtomic;
 
 /**
  * One-at-a-time bicycle passage with a FIFO waiting queue.
@@ -53,9 +54,11 @@ public final class LaneBottleneck extends ViewableAtomic {
     public message out() {
         // DEVS outputs are evaluated just BEFORE the internal transition.
         // The currently served cyclist leaves when their passage timer expires.
-        return inService == null
-                ? new message()
-                : outputNameOnPort(inService.getName(), "departed");
+        message output = new message();
+        if (inService != null) {
+            output.add(new content("departed", new entity(inService.getName())));
+        }
+        return output;
     }
 
     private void finishPassage() {
@@ -81,7 +84,7 @@ public final class LaneBottleneck extends ViewableAtomic {
         // Validate the entire bag before mutating state, so an invalid input
         // cannot leave half a batch of cyclists in the queue.
         for (int i = 0; i < inputs.getLength(); i++) {
-            String port = inputs.getPortName(i);
+            String port = inputs.read(i).getPortName();
             if (!"arrival".equals(port) && !"block".equals(port) && !"clear".equals(port)) {
                 throw new IllegalArgumentException("unknown input port: " + port);
             }
@@ -92,14 +95,20 @@ public final class LaneBottleneck extends ViewableAtomic {
 
         // An obstruction starting and ending at the same timestamp is treated
         // conservatively: BLOCK wins, so no new passage begins on that tie.
-        if (somethingOnPort(inputs, "clear")) {
+        boolean clearReceived = false;
+        boolean blockReceived = false;
+        for (int i = 0; i < inputs.getLength(); i++) {
+            clearReceived |= inputs.onPort("clear", i);
+            blockReceived |= inputs.onPort("block", i);
+        }
+        if (clearReceived) {
             blocked = false;
         }
-        if (somethingOnPort(inputs, "block")) {
+        if (blockReceived) {
             blocked = true;
         }
         for (int i = 0; i < inputs.getLength(); i++) {
-            if (messageOnPort(inputs, "arrival", i)) {
+            if (inputs.onPort("arrival", i)) {
                 waiting.addLast(inputs.getValOnPort("arrival", i));
             }
         }

@@ -3,8 +3,10 @@ package org.cyclistics.devs;
 import java.util.ArrayList;
 import java.util.List;
 
-import genDevs.modeling.message;
-import simView.ViewableAtomic;
+import GenCol.entity;
+import model.modeling.content;
+import model.modeling.message;
+import view.modeling.ViewableAtomic;
 
 /**
  * Announces when a bicycle lane becomes blocked and when it clears.
@@ -72,7 +74,9 @@ public final class ObstructionController extends ViewableAtomic {
             return new message();
         }
         String port = eventPorts.get(nextEventIndex);
-        return outputNameOnPort(port.equals("block") ? "blocked" : "cleared", port);
+        message output = new message();
+        output.add(new content(port, new entity(port.equals("block") ? "blocked" : "cleared")));
+        return output;
     }
 
     @Override

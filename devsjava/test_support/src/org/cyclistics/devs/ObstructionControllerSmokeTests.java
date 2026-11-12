@@ -3,8 +3,8 @@ package org.cyclistics.devs;
 import java.util.Objects;
 
 import GenCol.entity;
-import genDevs.modeling.content;
-import genDevs.modeling.message;
+import model.modeling.content;
+import model.modeling.message;
 
 /** Standalone logic tests: not a replacement for a real DEVSJAVA coordinator. */
 public final class ObstructionControllerSmokeTests {
@@ -25,7 +25,7 @@ public final class ObstructionControllerSmokeTests {
     private static void port(ObstructionController controller, String expected) {
         message output = controller.out();
         check(output.getLength() == 1, "exactly one scheduled output");
-        check(Objects.equals(expected, output.getPortName(0)), "expected output port " + expected);
+        check(Objects.equals(expected, output.read(0).getPortName()), "expected output port " + expected);
         String expectedValue = expected.equals("block") ? "blocked" : "cleared";
         check(Objects.equals(expectedValue, output.getValOnPort(expected, 0).getName()),
               "expected output value " + expectedValue);

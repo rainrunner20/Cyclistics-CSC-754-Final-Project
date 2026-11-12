@@ -1,8 +1,8 @@
 package org.cyclistics.devs;
 
 import GenCol.entity;
-import genDevs.modeling.content;
-import genDevs.modeling.message;
+import model.modeling.content;
+import model.modeling.message;
 
 /** Run atomic transition checks without downloading JUnit or the course JAR. */
 public final class LaneBottleneckSmokeTests {
@@ -44,7 +44,7 @@ public final class LaneBottleneckSmokeTests {
     private static String departure(LaneBottleneck lane) {
         message output = lane.out();
         check(output.getLength() == 1, "one cyclist departs per internal event");
-        text("departed", output.getPortName(0), "correct DEVS output port");
+        text("departed", output.read(0).getPortName(), "correct DEVS output port");
         return output.getValOnPort("departed", 0).getName();
     }
 

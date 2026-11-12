@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import genDevs.modeling.message;
-import simView.ViewableAtomic;
+import GenCol.entity;
+import model.modeling.content;
+import model.modeling.message;
+import view.modeling.ViewableAtomic;
 
 /**
  * Emits cyclist-arrival events at specified simulation times.
@@ -80,7 +82,9 @@ public final class CyclistGenerator extends ViewableAtomic {
             return new message();
         }
         // DEVS lambda runs BEFORE delta_internal: use +1 for the arriving ID.
-        return outputNameOnPort("cyclist-" + (nextArrivalIndex + 1), "arrival");
+        message output = new message();
+        output.add(new content("arrival", new entity("cyclist-" + (nextArrivalIndex + 1))));
+        return output;
     }
 
     @Override
@@ -98,8 +102,13 @@ public final class CyclistGenerator extends ViewableAtomic {
     @Override
     public void deltext(double elapsed, message inputs) {
         Continue(elapsed); // preserve the remaining time if another input arrives
-        if (somethingOnPort(inputs, "stop")) {
-            passivate();
+        if (inputs != null) {
+            for (int i = 0; i < inputs.getLength(); i++) {
+                if (inputs.onPort("stop", i)) {
+                    passivate();
+                    break;
+                }
+            }
         }
     }
 
