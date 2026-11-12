@@ -58,7 +58,9 @@ to go
 
   ;; Front-to-back order lets each follower observe the updated front rider.
   ;; This keeps riders from passing each other in our single-lane model.
-  ask (sort-on [(- xcor)] cyclists) [ move-cyclist ]
+  foreach (sort-on [(- xcor)] cyclists) [ rider ->
+    ask rider [ move-cyclist ]
+  ]
 
   set queue-now (pending-arrivals + count (cyclists with [waiting?]))
   set max-queue (max (list max-queue queue-now))

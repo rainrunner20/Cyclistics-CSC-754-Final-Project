@@ -33,10 +33,16 @@ class NetLogoModelStructureTests(unittest.TestCase):
 
     def test_abm_primitives_and_agents_present(self):
         for snippet in ("breed [cyclists cyclist]", "breed [trucks truck]",
-                        "ask patches", "ask (sort-on", "create-cyclists 1",
+                        "ask patches", "foreach (sort-on", "create-cyclists 1",
                         "random-seed seed-value", "tick", "min-one-of",
                         "stop-ticks", "pending-arrivals", "arrival-draws"):
             self.assertIn(snippet, self.code)
+
+    def test_ordered_agent_processing_uses_foreach(self):
+        # sort-on produces a list; ask accepts agents/agentsets, not lists.
+        self.assertNotIn("ask (sort-on", self.code)
+        self.assertIn("foreach (sort-on [(- xcor)] cyclists) [ rider ->", self.code)
+        self.assertIn("ask rider [ move-cyclist ]", self.code)
 
     def test_interface_exposes_controls(self):
         interface = self.text.split("@#$#@#$#@")[1]
