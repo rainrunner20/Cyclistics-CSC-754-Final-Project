@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import csv
 import heapq
+import json
 import math
 import random
 from collections import deque
@@ -204,15 +205,43 @@ def run_suite(output_dir: Path, arrival_rate_per_hour: float = 300,
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Cyclistics single-segment DES reference experiments")
     parser.add_argument("--output-dir", default="outputs")
-    parser.add_argument("--rate", type=float, default=300, help="synthetic cyclists/hour")
+    rate_source = parser.add_mutually_exclusive_group()
+    rate_source.add_argument("--rate", type=float, help="synthetic cyclists/hour (default 300)")
+    rate_source.add_argument("--calibration", type=Path,
+                             help="JSON output from cyclistics.nyc_calibration calibrate")
     parser.add_argument("--horizon", type=float, default=1800, help="seconds of arrivals")
     parser.add_argument("--seed", type=int, default=754)
     args = parser.parse_args()
-    results = run_suite(Path(args.output_dir), args.rate, args.horizon, args.seed)
+
+    # Keep the simulation engine independent of the API pipeline. It only
+    # needs a rate, whether it came from a demo number or measured counts.
+    if args.calibration:
+        from .nyc_calibration import load_calibration
+        calibration = load_calibration(args.calibration)
+        rate = calibration["arrival_rate_per_hour"]
+        metadata = {"input_type": "data_informed_poisson_rate",
+                    "calibration_file": str(args.calibration),
+                    "sensor_id": calibration["sensor_id"],
+                    "source_sha256": calibration.get("source_sha256")}
+    else:
+        rate = args.rate if args.rate is not None else 300
+        metadata = {"input_type": "synthetic_poisson_rate"}
+
+    out = Path(args.output_dir)
+    results = run_suite(out, rate, args.horizon, args.seed)
+    # Store the input choices separately from the CSV results so the future
+    # paper/presentation can trace what produced each experiment.
+    metadata.update({"arrival_rate_per_hour": rate, "random_seed": args.seed,
+                     "simulation_horizon_s": args.horizon,
+                     "note": "Individual arrivals remain simulated, not measured trajectories."})
+    (out / "simulation_inputs.json").write_text(json.dumps(metadata, indent=2) + "\n",
+                                                encoding="utf-8")
     for r in results:
         print(f"{r['scenario']:24s} | arrivals={r['arrivals']:3d} | "
               f"mean wait={r['mean_wait_s']:7.2f}s | p95={r['p95_wait_s']:7.2f}s | "
               f"max queue={r['max_waiting_queue']:3d}")
+    print(f"Input: {rate:.2f} cyclists/hour; {metadata['input_type']}. "
+          "Individual arrivals are still synthetic.")
 
 
 if __name__ == "__main__":
