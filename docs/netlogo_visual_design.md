@@ -1,6 +1,6 @@
 # Cyclistics — Milestone 3.6A: NYC-inspired NetLogo visualization
 
-**Status:** Proposed visual design; implementation and visual QA still pending
+**Status:** Implemented, desktop-tested and verified on one controlled paired experiment (November 13, 2026)
 **CSC 754:** NetLogo agent-based modeling, patch-based environments, experimental control, verification
 **Starting point:** `netlogo/Cyclistics_Bike_Lane_ABM.nlogo` on `feat/netlogo-abm` after PR #3
 
@@ -49,6 +49,8 @@ Maintain a consistent layering order: **street patches → obstruction highlight
 - No GIS, live computer vision, or real-time DEVS–NetLogo coupling.
 
 Those could be separately designed and tested in future behavioral milestones, while preserving the original single-lane baseline.
+
+**Verification record:** [NetLogo visual regression results](netlogo_visual_regression_results.md) documents the 138 passing tests, real NetLogo desktop run and byte-identical baseline/enhanced CSV export for the tested scenario. An active-obstruction screenshot is an optional follow-up.
 
 ## Implementation sequence
 
