@@ -1,4 +1,6 @@
-;; Cyclistics - NetLogo ABM, milestone 3.1A
+extensions [csv]
+
+;; Cyclistics - NetLogo ABM, milestone 3.2A: paired experiments
 ;; One tick = one simulated second. One patch ~ one unit of lane distance.
 ;; This is an independent agent-based prototype, NOT a live DEVS co-simulation.
 ;; No real observed cyclist trajectories or crash-risk predictions are used.
@@ -15,12 +17,15 @@ cyclists-own [
 globals [
   requested-arrivals       ;; stochastic cyclist demand created so far
   arrival-draws            ;; fixed, seeded Bernoulli draws for fair scenarios
+  speed-draws              ;; fixed per-arrival speeds so comparisons are paired
+  admitted-count           ;; number of cyclists assigned speeds so far
   pending-arrivals         ;; people waiting to enter if the spawn area is occupied
   departed-count           ;; cyclists that have exited the modeled lane
   total-completed-stop     ;; stop-ticks for riders who have exited only
   obstruction-active?      ;; whether a truck occupies the bottleneck
   queue-now                ;; fully stopped riders + pending entrants
   max-queue                ;; largest observed queue-now
+  queue-area               ;; sum of per-tick queue lengths (rider-seconds)
 ]
 
 to setup
@@ -40,12 +45,17 @@ to setup
   ;; truck creation or different queue lengths can change the RNG sequence.
   ;; Fixed seed + fixed input rate => identical demand in clear/blocked runs.
   set arrival-draws (n-values run-length [ i -> random-float 1 ])
+  ;; Match each requested cyclist's desired speed across control/treatment.
+  ;; Draw speeds before any scenario-specific truck creation or queue delays.
+  set speed-draws (n-values run-length [ i -> (0.7 + random-float 0.6) ])
+  set admitted-count 0
   set pending-arrivals 0
   set departed-count 0
   set total-completed-stop 0
   set obstruction-active? false
   set queue-now 0
   set max-queue 0
+  set queue-area 0
   reset-ticks
   update-obstruction
 end
@@ -64,6 +74,7 @@ to go
 
   set queue-now (pending-arrivals + count (cyclists with [waiting?]))
   set max-queue (max (list max-queue queue-now))
+  set queue-area (queue-area + queue-now)
   tick
 end
 
@@ -110,11 +121,12 @@ to admit-pending-cyclist
         set heading 90
         set color blue
         set size 1.2
-        set free-speed (0.7 + random-float 0.6)
+        set free-speed (item admitted-count speed-draws)
         set stop-ticks 0
         set waiting? false
       ]
       set pending-arrivals pending-arrivals - 1
+      set admitted-count admitted-count + 1
     ]
   ]
 end
@@ -182,6 +194,78 @@ to run-headless-scenario
     " peak-queue=" max-queue
     " mean-stop-completed=" (precision mean-stop-completed 3))
   if not conservation-ok? [ error "Cyclist conservation failed" ]
+end
+
+;; ================================================================
+;; Controlled experiment: same stochastic demand AND cyclist speeds.
+;; NetLogo's model directory is the default base for relative files.
+;; This model assumes the repo contains ../outputs/ (already gitignored).
+;; ================================================================
+
+to-report mean-queue
+  if ticks = 0 [ report 0 ]
+  report (queue-area / ticks)
+end
+
+to-report experiment-row [scenario-label]
+  report (list scenario-label blockage-enabled seed-value
+    arrival-rate-per-hour blockage-start blockage-duration run-length
+    requested-arrivals departed-count (count cyclists) pending-arrivals
+    max-queue (precision mean-queue 3)
+    (precision mean-stop-completed 3) conservation-ok?)
+end
+
+to run-paired-experiment
+  ;; Run only when the forever "go" button is stopped.
+  ;; Resetting via setup gives each scenario the same initial conditions.
+  let original-blockage blockage-enabled
+
+  set blockage-enabled 0
+  setup
+  repeat run-length [ go ]
+  if not conservation-ok? [ error "Clear-lane conservation failed" ]
+  let clear-row (experiment-row "clear")
+  let original-arrivals arrival-draws
+  let original-speeds speed-draws
+
+  set blockage-enabled 1
+  setup
+  repeat run-length [ go ]
+  if not conservation-ok? [ error "Blocked-lane conservation failed" ]
+  let blocked-row (experiment-row "blocked")
+
+  ;; Check the actual sampled inputs, not only the seed value.
+  if arrival-draws != original-arrivals [
+    error "Paired experiment failed: arrival schedules differ"
+  ]
+  if speed-draws != original-speeds [
+    error "Paired experiment failed: individual desired speeds differ"
+  ]
+  if (item 7 clear-row) != (item 7 blocked-row) [
+    error "Paired experiment failed: requested cyclist counts differ"
+  ]
+
+  ;; Restore the user's slider setting; leave the blocked result displayed.
+  set blockage-enabled original-blockage
+  let columns ["scenario" "blockage_enabled" "seed" "arrival_rate_per_hour"
+    "blockage_start_s" "blockage_duration_s" "run_length_s"
+    "requested" "departed" "on_lane" "pending" "peak_queue"
+    "mean_queue" "mean_stop_completed_s" "conservation_ok"]
+  csv:to-file "../outputs/netlogo_paired_results.csv"
+    (list columns clear-row blocked-row)
+
+  print "Cyclistics paired experiment: identical arrival and desired-speed draws"
+  print (word "CLEAR   demand=" (item 7 clear-row)
+    " departed=" (item 8 clear-row)
+    " peak-queue=" (item 11 clear-row)
+    " mean-queue=" (item 12 clear-row)
+    " mean-stop-completed=" (item 13 clear-row))
+  print (word "BLOCKED demand=" (item 7 blocked-row)
+    " departed=" (item 8 blocked-row)
+    " peak-queue=" (item 11 blocked-row)
+    " mean-queue=" (item 12 blocked-row)
+    " mean-stop-completed=" (item 13 blocked-row))
+  print "CSV saved: ../outputs/netlogo_paired_results.csv"
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -412,6 +496,34 @@ conservation-ok?
 1
 11
 
+BUTTON
+10
+355
+242
+389
+Compare clear vs blocked
+run-paired-experiment
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+10
+396
+242
+441
+Mean queue (riders)
+mean-queue
+2
+1
+11
+
 PLOT
 260
 281
@@ -432,7 +544,7 @@ PENS
 @#$#@#$#@
 ## WHAT IS IT?
 
-Cyclistics Milestone 3.1A is a small, visual agent-based bicycle-lane model for CSC 754. Each cyclist is an independent turtle that has an individual speed and follows the rider ahead. A delivery truck blocks the lane between configurable times. This is not a real-time digital twin or a measured NYC traffic model.
+Cyclistics Milestone 3.2A is a small, visual agent-based bicycle-lane model for CSC 754. Each cyclist is an independent turtle that has an individual speed and follows the rider ahead. A delivery truck blocks the lane between configurable times. This is not a real-time digital twin or a measured NYC traffic model.
 
 ## HOW TO USE IT
 
@@ -440,17 +552,18 @@ Cyclistics Milestone 3.1A is a small, visual agent-based bicycle-lane model for 
 2. Blue bicycles are moving. Yellow bicycles are stopped. The red/orange truck is an obstruction.
 3. Compare `blockage-enabled = 0` (clear lane) with `blockage-enabled = 1` using the same `seed-value`.
 4. Observe the queue plot, peak queue, departure count, and completed-rider stop-time monitor.
-5. Start with the defaults, then vary arrival-rate-per-hour, blockage-duration, and seed-value.
+5. Stop the forever **go** button, click **Compare clear vs blocked** to run an A/B experiment automatically, or type `run-paired-experiment` in the Command Center. Results are exported as CSV to the repository's `outputs/netlogo_paired_results.csv` (relative to the `netlogo/` model directory).
+6. Re-run with different `seed-value` and arrival rate to assess sensitivity.
 
 ## HOW IT WORKS
 
 **ABM (CSC 754):** Cyclists are turtles. The road is made of patches. Each cyclist observes the next cyclist ahead and moves at its personal desired speed unless following distance or an obstruction prevents that movement. Movement is processed from the most advanced cyclist backward.
 
-**Discretization:** One `go` call is one second. Arrivals are Bernoulli trials with probability arrival-rate-per-hour / 3600 per tick. The random arrival draws are precomputed in `setup` so a clear and blocked run with the same seed and demand rate sees identical requested arrivals. Excess demand waits outside the lane when the entrance is occupied.
+**Discretization:** One `go` call is one second. Arrivals are Bernoulli trials with probability arrival-rate-per-hour / 3600 per tick. The random arrival draws are precomputed in `setup` so a clear and blocked run with the same seed and demand rate sees identical requested arrivals and the same pre-sampled desired speeds for each cyclist. Excess demand waits outside the lane when the entrance is occupied.
 
 **Obstruction:** The truck occupies the marked lane region during the interval `[blockage-start, blockage-start + blockage-duration)`. Cyclists already beyond the stop line x = 5 can finish passing.
 
-**Statistics:** `queue-now` counts riders currently *fully stopped* plus riders awaiting entrance. `mean-stop-completed` averages only whole stopped ticks for cyclists who have departed, not all travel delay and not censored in-progress waits. `max-queue` is the largest queue counted at the end of a tick. The conservation monitor checks `requested = departed + active + pending`.
+**Statistics:** `queue-now` counts riders currently *fully stopped* plus riders awaiting entrance. `mean-stop-completed` averages only whole stopped ticks for cyclists who have departed, not all travel delay and not censored in-progress waits. `max-queue` is the largest queue counted at the end of a tick. `mean-queue` is the average of end-of-tick queue counts across the simulated horizon (pending entrants + fully stopped cyclists). The conservation monitor checks `requested = departed + active + pending`.
 
 ## WHAT IT DOES NOT DO
 
@@ -458,7 +571,7 @@ This model is intentionally separate from the Java DEVS-Suite coordinator. It ha
 
 ## FUTURE EXTENSIONS
 
-Next: reproducible clear-vs-blocked comparisons, timestamped CSV exports, multiple behavior profiles, time-step convergence checks, sensitivity analysis, and explicit DEVS/NetLogo cross-model validation.
+Next: replicated experiments across multiple seeds, additional rider behavior profiles, time-step convergence, and careful DEVS/NetLogo comparisons under harmonized assumptions. This first two-row CSV is an internal paired comparison, not field validation.
 @#$#@#$#@
 default
 true
