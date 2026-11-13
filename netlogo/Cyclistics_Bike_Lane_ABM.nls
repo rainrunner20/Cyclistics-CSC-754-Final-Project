@@ -28,18 +28,47 @@ globals [
   queue-area               ;; sum of per-tick queue lengths (rider-seconds)
 ]
 
+;; Keep the painted lane in one place so a cleared obstruction cannot
+;; accidentally restore the old blue background.
+to-report bike-lane-color  ;; one shared color for setup and truck clearance
+  report green + 1
+end
+
+;; Street context for the demo only. Cyclists still move on pycor = 0.
+;; Patches outside that row are decoration, not additional traffic lanes.
+to paint-street-background  ;; scenery only; no new passable lanes
+  ask patches [
+    ifelse pycor = 0 [
+      set pcolor bike-lane-color
+    ] [
+      ifelse abs pycor = 1 [
+        ;; A dashed separator/buffer between the green lane and the street.
+        ifelse (pxcor mod 4) = 0
+          [ set pcolor white ]
+          [ set pcolor gray + 1 ]
+      ] [
+        ifelse pycor > 1 [
+          ;; Asphalt and a broken roadway marking above the bike lane.
+          set pcolor gray - 2
+          if pycor = 3 and (pxcor mod 6) < 3 [
+            set pcolor gray + 1
+          ]
+        ] [
+          ;; A light sidewalk with a slightly darker curb edge below.
+          set pcolor gray + 3
+          if pycor = -2 [ set pcolor gray + 1 ]
+        ]
+      ]
+    ]
+  ]
+end
+
 to setup
   clear-all
   random-seed seed-value
   set-default-shape cyclists "bicycle"
   set-default-shape trucks "truck"
-  ask patches [
-    ifelse pycor = 0
-      [ set pcolor sky ]
-      [ ifelse abs pycor = 1
-          [ set pcolor gray + 2 ]
-          [ set pcolor gray - 1 ] ]
-  ]
+  paint-street-background
   set requested-arrivals 0
   ;; Pre-sample arrivals before any riders or trucks are created. Otherwise
   ;; truck creation or different queue lengths can change the RNG sequence.
@@ -97,7 +126,7 @@ to update-obstruction
     ] [
       ask trucks [ die ]
       ask patches with [pycor = 0 and pxcor >= 6 and pxcor <= 7] [
-        set pcolor sky
+        set pcolor bike-lane-color
       ]
     ]
   ]
