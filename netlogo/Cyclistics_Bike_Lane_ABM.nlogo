@@ -1,6 +1,6 @@
 extensions [csv]
 
-;; Cyclistics - NetLogo ABM, milestone 3.2A: paired experiments
+;; Cyclistics - NetLogo ABM, milestone 3.2B: sensitivity experiments
 ;; One tick = one simulated second. One patch ~ one unit of lane distance.
 ;; This is an independent agent-based prototype, NOT a live DEVS co-simulation.
 ;; No real observed cyclist trajectories or crash-risk predictions are used.
@@ -267,6 +267,126 @@ to run-paired-experiment
     " mean-stop-completed=" (item 13 blocked-row))
   print "CSV saved: ../outputs/netlogo_paired_results.csv"
 end
+
+;; =====================================================================
+;; Sensitivity study: 4 demand rates x 4 durations x 10 random seeds.
+;; Each (rate, seed) baseline is computed once and reused for 4 paired
+;; comparisons, including the exact no-blockage control (duration 0).
+;; 40 clear baselines + 120 obstructed runs = 160 simulated scenarios.
+;; Source data stay fully synthetic. Results are not field calibration.
+;; =====================================================================
+
+to run-sensitivity-study
+  ;; This one-shot procedure must run while the forever "go" button is off.
+  ;; Match demands and individual desired speeds per seed / arrival rate.
+  let rates [150 300 600 900]
+  let durations [0 30 60 120]
+  let seeds [101 102 103 104 105 106 107 108 109 110]
+  let original-rate arrival-rate-per-hour
+  let original-blockage blockage-enabled
+  let original-start blockage-start
+  let original-duration blockage-duration
+  let original-seed seed-value
+  let original-length run-length
+  let rows []
+
+  no-display
+  set blockage-start 45
+  set run-length 600
+
+  foreach rates [ rate ->
+    foreach seeds [ seed-number ->
+      set arrival-rate-per-hour rate
+      set seed-value seed-number
+      set blockage-enabled 0
+      set blockage-duration 0
+      setup
+      repeat run-length [ go ]
+      if not conservation-ok? [ error "Sensitivity baseline violated cyclist conservation" ]
+
+      ;; Save the reference outputs and full underlying random draws.
+      let base-arrivals arrival-draws
+      let base-speeds speed-draws
+      let base-requested requested-arrivals
+      let base-departed departed-count
+      let base-peak max-queue
+      let base-mean-queue mean-queue
+      let base-mean-stop mean-stop-completed
+      let base-remaining (pending-arrivals + count cyclists)
+
+      foreach durations [ duration ->
+        set blockage-duration duration
+        set blockage-enabled (ifelse-value (duration = 0) [0] [1])
+        setup
+        repeat run-length [ go ]
+        if not conservation-ok? [ error "Sensitivity run violated cyclist conservation" ]
+        if arrival-draws != base-arrivals [
+          error "Sensitivity run did not preserve the sampled arrival schedule"
+        ]
+        if speed-draws != base-speeds [
+          error "Sensitivity run did not preserve the cyclist desired speeds"
+        ]
+        if requested-arrivals != base-requested [
+          error "Sensitivity run did not preserve requested cyclist demand"
+        ]
+
+        let treatment-mean-queue mean-queue
+        let treatment-mean-stop mean-stop-completed
+        let treatment-remaining (pending-arrivals + count cyclists)
+        if duration = 0 [
+          ;; Zero blockage must exactly reproduce the control scenario.
+          if (departed-count != base-departed or
+              max-queue != base-peak or
+              treatment-mean-queue != base-mean-queue or
+              treatment-mean-stop != base-mean-stop or
+              treatment-remaining != base-remaining) [
+            error "Zero-duration control differs from its baseline"
+          ]
+        ]
+
+        ;; One paired row per (rate, duration, seed).
+        ;; Deltas are treatment MINUS clear; do not round before analysis.
+        let row (list rate duration seed-number blockage-start run-length
+          requested-arrivals
+          base-departed departed-count (departed-count - base-departed)
+          base-peak max-queue (max-queue - base-peak)
+          base-mean-queue treatment-mean-queue
+          (treatment-mean-queue - base-mean-queue)
+          base-mean-stop treatment-mean-stop
+          (treatment-mean-stop - base-mean-stop)
+          base-remaining treatment-remaining
+          conservation-ok? true)
+        set rows (lput row rows)
+      ]
+      print (word "Finished sensitivity runs: rate=" rate
+        "/hr seed=" seed-number " (4 paired durations)")
+    ]
+  ]
+
+  ;; Restore every changed interface parameter. Reset the model to match.
+  set arrival-rate-per-hour original-rate
+  set blockage-enabled original-blockage
+  set blockage-start original-start
+  set blockage-duration original-duration
+  set seed-value original-seed
+  set run-length original-length
+  setup
+  display
+
+  let columns ["arrival_rate_per_hour" "blockage_duration_s" "seed"
+    "blockage_start_s" "run_length_s" "requested"
+    "clear_departed" "blocked_departed" "delta_departed"
+    "clear_peak_queue" "blocked_peak_queue" "delta_peak_queue"
+    "clear_mean_queue" "blocked_mean_queue" "delta_mean_queue"
+    "clear_mean_stop_completed_s" "blocked_mean_stop_completed_s"
+    "delta_mean_stop_completed_s" "clear_remaining" "blocked_remaining"
+    "conservation_ok" "paired_inputs_ok"]
+  csv:to-file "../outputs/netlogo_sensitivity_raw.csv"
+    (fput columns rows)
+  print (word "PASS: wrote " (length rows)
+    " paired sensitivity rows to ../outputs/netlogo_sensitivity_raw.csv")
+  print "Use the Python analysis command to calculate means and 95% intervals."
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 261
@@ -339,7 +459,7 @@ arrival-rate-per-hour
 0
 1800
 600.0
-60
+30
 1
 cyclists/hr
 HORIZONTAL
@@ -523,6 +643,23 @@ mean-queue
 2
 1
 11
+
+BUTTON
+10
+447
+242
+481
+Run sensitivity study
+run-sensitivity-study
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 PLOT
 260
