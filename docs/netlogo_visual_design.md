@@ -1,7 +1,7 @@
 # Cyclistics — Milestone 3.6A: NYC-inspired NetLogo visualization
 
-**Status:** Proposed visual design; implementation and visual QA still pending  
-**CSC 754:** NetLogo agent-based modeling, patch-based environments, experimental control, verification  
+**Status:** Proposed visual design; implementation and visual QA still pending
+**CSC 754:** NetLogo agent-based modeling, patch-based environments, experimental control, verification
 **Starting point:** `netlogo/Cyclistics_Bike_Lane_ABM.nlogo` on `feat/netlogo-abm` after PR #3
 
 ## Goal
