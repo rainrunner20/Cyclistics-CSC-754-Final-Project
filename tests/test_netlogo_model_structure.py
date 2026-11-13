@@ -44,6 +44,14 @@ class NetLogoModelStructureTests(unittest.TestCase):
         self.assertIn("foreach (sort-on [(- xcor)] cyclists) [ rider ->", self.code)
         self.assertIn("ask rider [ move-cyclist ]", self.code)
 
+    def test_tiny_positive_steps_cannot_deadlock_cyclists(self):
+        # Regression for the observed 600-tick gridlock despite cleared truck.
+        # A cyclist close to max-pxcor must still move that last fraction.
+        self.assertNotIn("set waiting? (possible-step < 0.01)", self.code)
+        self.assertIn("set waiting? (possible-step <= 0.000000001)", self.code)
+        self.assertIn("if possible-step > 0 [\n    set xcor xcor + possible-step\n  ]", self.code)
+        self.assertNotIn("ifelse waiting? [\n    set stop-ticks stop-ticks + 1\n    set color yellow\n  ] [\n    set xcor", self.code)
+
     def test_interface_exposes_controls(self):
         interface = self.text.split("@#$#@#$#@")[1]
         for control in ("arrival-rate-per-hour", "blockage-enabled", "blockage-start",

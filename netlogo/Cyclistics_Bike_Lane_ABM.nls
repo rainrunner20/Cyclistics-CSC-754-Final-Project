@@ -141,12 +141,17 @@ to move-cyclist  ;; cyclist context only
   set possible-step (max (list 0
     (min (list possible-step (max-pxcor - xcor)))))
 
-  set waiting? (possible-step < 0.01)
+  ;; Always apply any positive motion, even the final small step to the exit.
+  ;; Otherwise a rider within 0.01 patches of the exit can become stuck
+  ;; forever and create a permanent queue behind them.
+  set waiting? (possible-step <= 0.000000001)
+  if possible-step > 0 [
+    set xcor xcor + possible-step
+  ]
   ifelse waiting? [
     set stop-ticks stop-ticks + 1
     set color yellow
   ] [
-    set xcor xcor + possible-step
     set color blue
   ]
 
