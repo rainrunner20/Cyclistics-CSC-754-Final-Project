@@ -1,7 +1,9 @@
 # Cyclistics — ObstructionController design (Milestone 2.1B)
 
-**Branch:** `feat/devs-atomic-models`  
+**Branch:** `feat/devs-atomic-models`
 **Status:** Standalone Java atomic logic and local smoke tests. We have **not** run this against the official DEVSJAVA coordinator yet.
+
+**Current verification (November 14, 2026):** The production Java sources have been merged into `feat/final-integration`; five classes compile against the external historical DEVS-Suite 2.1 JAR, and the coupled coordinator ran the deterministic two-cyclist fixture (departures at 14 s and 24 s). This does not establish field validation or equivalence to the course-provided distribution.
 
 ## Why does this component exist?
 
