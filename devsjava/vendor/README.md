@@ -18,4 +18,12 @@ Then from the repository root run:
 .\devsjava\scripts\verify-real-devsjava.ps1
 ```
 
-This is a **compile-only probe**; running the real coordinator is the next milestone.
+The command above is a **compile-only probe**. The coupled model can be run separately with:
+
+```powershell
+.\devsjava\scripts\run-real-coupled.ps1
+```
+
+On November 14, 2026, the production Java models compiled against the historical DEVS-Suite 2.1.0 JAR, and the real coordinator reported departures at 14 and 24 seconds for the deterministic two-cyclist fixture. This is **not** proof that the historical binary matches the professor's exact course distribution or that simulated NYC traffic delays are field-validated.
+
+The library remains an **external, untracked local dependency**. Earlier Git history contained the JAR; `feat/final-integration` stopped tracking it at commit `1b8def4`.
