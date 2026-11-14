@@ -47,7 +47,22 @@ Java: matches_python_deterministic_fixture
 NetLogo: within_netlogo_consistent_only
 ```
 
-**Conclusion:** The Python reference and the real DEVS-Suite runner agreed on departure order and timestamps, generated/departed counts, and the maximum waiting queue **for this one deterministic fixture**. The Java event log was parsed and checked rather than substituting an expected result for an actual execution. The comparison tool's automated checks also passed as part of the 131-test Python suite.
+**Conclusion:** The Python reference and the real DEVS-Suite runner agreed on departure order and timestamps, generated/departed counts, and the maximum waiting queue **for this one deterministic fixture**. The Java event log was parsed and checked rather than substituting an expected result for an actual execution. The comparison tool's automated checks were included in the integrated Python test suite; the later 3.8B performance branch extends the suite but does not change this deterministic fixture.
+
+## Event schedule for the paper and CSC 754 Q&A
+
+```mermaid
+flowchart LR
+    A["t=10: cyclist 1 arrives"] --> B["t=12: obstruction starts"]
+    B --> C["t=14: cyclist 1 departs"]
+    C --> D["t=15: cyclist 2 arrives and waits"]
+    D --> E["t=20: obstruction clears"]
+    E --> F["t=24: cyclist 2 departs"]
+```
+
+This is a **schematic explanation derived from the shared fixture**, not a logged trace of every DEVS-Suite internal event. The 4-second first service is permitted to finish after the obstruction begins. The second cyclist waits from t=15 to t=20, then takes four seconds to complete service. Under these fixture assumptions, total waiting time is 0 + 5 = 5 seconds for two riders, hence a **2.5-second mean waiting time**. Do not interpret that result as a measured NYC delay.
+
+**DEVS vocabulary:** the CyclistGenerator sends arrivals through a coupled model; the ObstructionController sends block/clear messages; LaneBottleneck tracks service, FIFO waiting and its next transition. The coordinator advances the global simulation clock from event to event. The output for a completed service occurs at its scheduled internal transition. NetLogo, by contrast, advances one global tick every modeled second and executes autonomous cyclist movement rules.
 
 ## Separate NetLogo evidence
 
@@ -57,7 +72,7 @@ The result `within_netlogo_consistent_only` is **not** a numerical agreement cla
 
 ## Reproduction and provenance
 
-The Java implementation currently lives on the separate `feat/devs-atomic-models` branch. It was executed from a Git worktree using:
+The production Java implementation was integrated into `main` by PR #5 (November 14, 2026). The original `feat/devs-atomic-models` branch is preserved for history. Reproduce the actual coordinator fixture from the repository root with:
 
 ```powershell
 .\devsjava\scripts\run-real-coupled.ps1
@@ -76,4 +91,4 @@ The report stores SHA-256 hashes for the Java log and NetLogo input. Both comple
 - The historical DEVS-Suite 2.1.0 JAR was used successfully, but it has **not** been established as Dr. Gu's exact class distribution.
 - Agreement on this two-cyclist example is limited verification, not broad cross-implementation equivalence. Simultaneous events, larger arrival sets, repeated obstructions, and more complex schedules still need comparison.
 - No cyclist trajectories, delays, queues, or collision risks were validated against field observations. NYC counter counts inform demand rates elsewhere in Cyclistics; they do not validate these outputs.
-- The DEVSJAVA implementation still needs repository-integration review because the Java code is on a separate feature branch.
+- The DEVSJAVA code is integrated in `main`, but broader cross-implementation verification remains future work; larger schedules and simultaneous input/output events are not established as equivalent.
