@@ -1,0 +1,634 @@
+extensions [csv]
+
+;; Cyclistics - NetLogo ABM, milestone 3.2B: sensitivity experiments
+;; One tick = one simulated second. One patch ~ one unit of lane distance.
+;; This is an independent agent-based prototype, NOT a live DEVS co-simulation.
+;; No real observed cyclist trajectories or crash-risk predictions are used.
+
+breed [cyclists cyclist]
+breed [trucks truck]
+
+cyclists-own [
+  free-speed               ;; patches per tick: each rider has an individual speed
+  stop-ticks               ;; whole seconds spent completely stopped
+  waiting?                 ;; changed every tick by that rider's local rule
+]
+
+globals [
+  requested-arrivals       ;; stochastic cyclist demand created so far
+  arrival-draws            ;; fixed, seeded Bernoulli draws for fair scenarios
+  speed-draws              ;; fixed per-arrival speeds so comparisons are paired
+  admitted-count           ;; number of cyclists assigned speeds so far
+  pending-arrivals         ;; people waiting to enter if the spawn area is occupied
+  departed-count           ;; cyclists that have exited the modeled lane
+  total-completed-stop     ;; stop-ticks for riders who have exited only
+  obstruction-active?      ;; whether a truck occupies the bottleneck
+  queue-now                ;; fully stopped riders + pending entrants
+  max-queue                ;; largest observed queue-now
+  queue-area               ;; sum of per-tick queue lengths (rider-seconds)
+]
+
+;; Keep the painted lane in one place so a cleared obstruction cannot
+;; accidentally restore the old blue background.
+to-report bike-lane-color  ;; one shared color for setup and truck clearance
+  report green + 1
+end
+
+;; Street context for the demo only. Cyclists still move on pycor = 0.
+;; Patches outside that row are decoration, not additional traffic lanes.
+to paint-street-background  ;; scenery only; no new passable lanes
+  ask patches [
+    ifelse pycor = 0 [
+      set pcolor bike-lane-color
+    ] [
+      ifelse abs pycor = 1 [
+        ;; A dashed separator/buffer between the green lane and the street.
+        ifelse (pxcor mod 4) = 0
+          [ set pcolor white ]
+          [ set pcolor gray + 1 ]
+      ] [
+        ifelse pycor > 1 [
+          ;; Asphalt and a broken roadway marking above the bike lane.
+          set pcolor gray - 2
+          if pycor = 3 and (pxcor mod 6) < 3 [
+            set pcolor gray + 1
+          ]
+        ] [
+          ;; A light sidewalk with a slightly darker curb edge below.
+          set pcolor gray + 3
+          if pycor = -2 [ set pcolor gray + 1 ]
+        ]
+      ]
+    ]
+  ]
+end
+
+to setup
+  clear-all
+  random-seed seed-value
+  set-default-shape cyclists "bicycle"
+  set-default-shape trucks "truck"
+  paint-street-background
+  set requested-arrivals 0
+  ;; Pre-sample arrivals before any riders or trucks are created. Otherwise
+  ;; truck creation or different queue lengths can change the RNG sequence.
+  ;; Fixed seed + fixed input rate => identical demand in clear/blocked runs.
+  set arrival-draws (n-values run-length [ i -> random-float 1 ])
+  ;; Match each requested cyclist's desired speed across control/treatment.
+  ;; Draw speeds before any scenario-specific truck creation or queue delays.
+  set speed-draws (n-values run-length [ i -> (0.7 + random-float 0.6) ])
+  set admitted-count 0
+  set pending-arrivals 0
+  set departed-count 0
+  set total-completed-stop 0
+  set obstruction-active? false
+  set queue-now 0
+  set max-queue 0
+  set queue-area 0
+  reset-ticks
+  update-obstruction
+end
+
+to go
+  if ticks >= run-length [ stop ]
+  update-obstruction
+  request-arrival
+  admit-pending-cyclist
+
+  ;; Front-to-back order lets each follower observe the updated front rider.
+  ;; This keeps riders from passing each other in our single-lane model.
+  foreach (sort-on [(- xcor)] cyclists) [ rider ->
+    ask rider [ move-cyclist ]
+  ]
+
+  set queue-now (pending-arrivals + count (cyclists with [waiting?]))
+  set max-queue (max (list max-queue queue-now))
+  set queue-area (queue-area + queue-now)
+  tick
+end
+
+to update-obstruction
+  let scheduled? (blockage-enabled = 1 and
+    ticks >= blockage-start and
+    ticks < (blockage-start + blockage-duration))
+  if scheduled? != obstruction-active? [
+    set obstruction-active? scheduled?
+    ifelse obstruction-active? [
+      ask patches with [pycor = 0 and pxcor >= 6 and pxcor <= 7] [
+        set pcolor orange
+      ]
+      create-trucks 1 [
+        setxy 6.5 0
+        set size 2
+        set heading 90
+        set color red
+      ]
+    ] [
+      ask trucks [ die ]
+      ask patches with [pycor = 0 and pxcor >= 6 and pxcor <= 7] [
+        set pcolor bike-lane-color
+      ]
+    ]
+  ]
+end
+
+to request-arrival
+  ;; Bernoulli demand: expected arrivals per tick = cyclists/hour / 3600.
+  ;; This is synthetic traffic, even if a later experiment picks a NYC-based rate.
+  if (item ticks arrival-draws) < (arrival-rate-per-hour / 3600) [
+    set requested-arrivals requested-arrivals + 1
+    set pending-arrivals pending-arrivals + 1
+  ]
+end
+
+to admit-pending-cyclist
+  if pending-arrivals > 0 [
+    ;; Don't draw two cyclists on top of one another at the western entrance.
+    if not any? (cyclists with [xcor < (min-pxcor + 1)]) [
+      create-cyclists 1 [
+        setxy min-pxcor 0
+        set heading 90
+        set color blue
+        set size 1.2
+        set free-speed (item admitted-count speed-draws)
+        set stop-ticks 0
+        set waiting? false
+      ]
+      set pending-arrivals pending-arrivals - 1
+      set admitted-count admitted-count + 1
+    ]
+  ]
+end
+
+to move-cyclist  ;; cyclist context only
+  let possible-step free-speed
+
+  ;; A rider checks the nearest rider in front (a simple local interaction).
+  let rider-ahead min-one-of (other cyclists with [
+    xcor > [xcor] of myself
+  ]) [ xcor ]
+  if rider-ahead != nobody [
+    set possible-step (min (list possible-step
+      ([xcor] of rider-ahead - xcor - 0.85)))
+  ]
+
+  ;; A truck prevents NEW riders entering x > 5. Riders who passed the
+  ;; stop line before it arrived may finish, as in our DEVS example.
+  if obstruction-active? and xcor <= 5 [
+    set possible-step (min (list possible-step (5 - xcor)))
+  ]
+
+  ;; Never travel beyond the model's non-wrapping eastern edge.
+  set possible-step (max (list 0
+    (min (list possible-step (max-pxcor - xcor)))))
+
+  ;; Always apply any positive motion, even the final small step to the exit.
+  ;; Otherwise a rider within 0.01 patches of the exit can become stuck
+  ;; forever and create a permanent queue behind them.
+  set waiting? (possible-step <= 0.000000001)
+  if possible-step > 0 [
+    set xcor xcor + possible-step
+  ]
+  ifelse waiting? [
+    set stop-ticks stop-ticks + 1
+    set color yellow
+  ] [
+    set color blue
+  ]
+
+  if xcor >= (max-pxcor - 0.001) [
+    set total-completed-stop total-completed-stop + stop-ticks
+    set departed-count departed-count + 1
+    die
+  ]
+end
+
+to-report mean-stop-completed
+  if departed-count = 0 [ report 0 ]
+  report (total-completed-stop / departed-count)
+end
+
+to-report conservation-ok?
+  ;; This identity should hold every tick, including with an entrance backlog.
+  report requested-arrivals = (pending-arrivals + count cyclists + departed-count)
+end
+
+to run-headless-scenario
+  setup
+  repeat run-length [ go ]
+  show (word "requested=" requested-arrivals
+    " departed=" departed-count
+    " active=" count cyclists
+    " pending=" pending-arrivals
+    " peak-queue=" max-queue
+    " mean-stop-completed=" (precision mean-stop-completed 3))
+  if not conservation-ok? [ error "Cyclist conservation failed" ]
+end
+
+;; ================================================================
+;; Controlled experiment: same stochastic demand AND cyclist speeds.
+;; NetLogo's model directory is the default base for relative files.
+;; This model assumes the repo contains ../outputs/ (already gitignored).
+;; ================================================================
+
+to-report mean-queue
+  if ticks = 0 [ report 0 ]
+  report (queue-area / ticks)
+end
+
+to-report experiment-row [scenario-label]
+  report (list scenario-label blockage-enabled seed-value
+    arrival-rate-per-hour blockage-start blockage-duration run-length
+    requested-arrivals departed-count (count cyclists) pending-arrivals
+    max-queue (precision mean-queue 3)
+    (precision mean-stop-completed 3) conservation-ok?)
+end
+
+to run-paired-experiment
+  ;; Run only when the forever "go" button is stopped.
+  ;; Resetting via setup gives each scenario the same initial conditions.
+  let original-blockage blockage-enabled
+
+  set blockage-enabled 0
+  setup
+  repeat run-length [ go ]
+  if not conservation-ok? [ error "Clear-lane conservation failed" ]
+  let clear-row (experiment-row "clear")
+  let original-arrivals arrival-draws
+  let original-speeds speed-draws
+
+  set blockage-enabled 1
+  setup
+  repeat run-length [ go ]
+  if not conservation-ok? [ error "Blocked-lane conservation failed" ]
+  let blocked-row (experiment-row "blocked")
+
+  ;; Check the actual sampled inputs, not only the seed value.
+  if arrival-draws != original-arrivals [
+    error "Paired experiment failed: arrival schedules differ"
+  ]
+  if speed-draws != original-speeds [
+    error "Paired experiment failed: individual desired speeds differ"
+  ]
+  if (item 7 clear-row) != (item 7 blocked-row) [
+    error "Paired experiment failed: requested cyclist counts differ"
+  ]
+
+  ;; Restore the user's slider setting; leave the blocked result displayed.
+  set blockage-enabled original-blockage
+  let columns ["scenario" "blockage_enabled" "seed" "arrival_rate_per_hour"
+    "blockage_start_s" "blockage_duration_s" "run_length_s"
+    "requested" "departed" "on_lane" "pending" "peak_queue"
+    "mean_queue" "mean_stop_completed_s" "conservation_ok"]
+  csv:to-file "../outputs/netlogo_paired_results.csv"
+    (list columns clear-row blocked-row)
+
+  print "Cyclistics paired experiment: identical arrival and desired-speed draws"
+  print (word "CLEAR   demand=" (item 7 clear-row)
+    " departed=" (item 8 clear-row)
+    " peak-queue=" (item 11 clear-row)
+    " mean-queue=" (item 12 clear-row)
+    " mean-stop-completed=" (item 13 clear-row))
+  print (word "BLOCKED demand=" (item 7 blocked-row)
+    " departed=" (item 8 blocked-row)
+    " peak-queue=" (item 11 blocked-row)
+    " mean-queue=" (item 12 blocked-row)
+    " mean-stop-completed=" (item 13 blocked-row))
+  print "CSV saved: ../outputs/netlogo_paired_results.csv"
+end
+
+;; =====================================================================
+;; Sensitivity study: 4 demand rates x 4 durations x 10 random seeds.
+;; Each (rate, seed) baseline is computed once and reused for 4 paired
+;; comparisons, including the exact no-blockage control (duration 0).
+;; 40 clear baselines + 120 obstructed runs = 160 simulated scenarios.
+;; Source data stay fully synthetic. Results are not field calibration.
+;; =====================================================================
+
+to run-sensitivity-study
+  ;; This one-shot procedure must run while the forever "go" button is off.
+  ;; Match demands and individual desired speeds per seed / arrival rate.
+  let rates [150 300 600 900]
+  let durations [0 30 60 120]
+  let seeds [101 102 103 104 105 106 107 108 109 110]
+  let original-rate arrival-rate-per-hour
+  let original-blockage blockage-enabled
+  let original-start blockage-start
+  let original-duration blockage-duration
+  let original-seed seed-value
+  let original-length run-length
+  let rows []
+
+  no-display
+  set blockage-start 45
+  set run-length 600
+
+  foreach rates [ rate ->
+    foreach seeds [ seed-number ->
+      set arrival-rate-per-hour rate
+      set seed-value seed-number
+      set blockage-enabled 0
+      set blockage-duration 0
+      setup
+      repeat run-length [ go ]
+      if not conservation-ok? [ error "Sensitivity baseline violated cyclist conservation" ]
+
+      ;; Save the reference outputs and full underlying random draws.
+      let base-arrivals arrival-draws
+      let base-speeds speed-draws
+      let base-requested requested-arrivals
+      let base-departed departed-count
+      let base-peak max-queue
+      let base-mean-queue mean-queue
+      let base-mean-stop mean-stop-completed
+      let base-remaining (pending-arrivals + count cyclists)
+
+      foreach durations [ duration ->
+        set blockage-duration duration
+        set blockage-enabled (ifelse-value (duration = 0) [0] [1])
+        setup
+        repeat run-length [ go ]
+        if not conservation-ok? [ error "Sensitivity run violated cyclist conservation" ]
+        if arrival-draws != base-arrivals [
+          error "Sensitivity run did not preserve the sampled arrival schedule"
+        ]
+        if speed-draws != base-speeds [
+          error "Sensitivity run did not preserve the cyclist desired speeds"
+        ]
+        if requested-arrivals != base-requested [
+          error "Sensitivity run did not preserve requested cyclist demand"
+        ]
+
+        let treatment-mean-queue mean-queue
+        let treatment-mean-stop mean-stop-completed
+        let treatment-remaining (pending-arrivals + count cyclists)
+        if duration = 0 [
+          ;; Zero blockage must exactly reproduce the control scenario.
+          if (departed-count != base-departed or
+              max-queue != base-peak or
+              treatment-mean-queue != base-mean-queue or
+              treatment-mean-stop != base-mean-stop or
+              treatment-remaining != base-remaining) [
+            error "Zero-duration control differs from its baseline"
+          ]
+        ]
+
+        ;; One paired row per (rate, duration, seed).
+        ;; Deltas are treatment MINUS clear; do not round before analysis.
+        let row (list rate duration seed-number blockage-start run-length
+          requested-arrivals
+          base-departed departed-count (departed-count - base-departed)
+          base-peak max-queue (max-queue - base-peak)
+          base-mean-queue treatment-mean-queue
+          (treatment-mean-queue - base-mean-queue)
+          base-mean-stop treatment-mean-stop
+          (treatment-mean-stop - base-mean-stop)
+          base-remaining treatment-remaining
+          conservation-ok? true)
+        set rows (lput row rows)
+      ]
+      print (word "Finished sensitivity runs: rate=" rate
+        "/hr seed=" seed-number " (4 paired durations)")
+    ]
+  ]
+
+  ;; Restore every changed interface parameter. Reset the model to match.
+  set arrival-rate-per-hour original-rate
+  set blockage-enabled original-blockage
+  set blockage-start original-start
+  set blockage-duration original-duration
+  set seed-value original-seed
+  set run-length original-length
+  setup
+  display
+
+  let columns ["arrival_rate_per_hour" "blockage_duration_s" "seed"
+    "blockage_start_s" "run_length_s" "requested"
+    "clear_departed" "blocked_departed" "delta_departed"
+    "clear_peak_queue" "blocked_peak_queue" "delta_peak_queue"
+    "clear_mean_queue" "blocked_mean_queue" "delta_mean_queue"
+    "clear_mean_stop_completed_s" "blocked_mean_stop_completed_s"
+    "delta_mean_stop_completed_s" "clear_remaining" "blocked_remaining"
+    "conservation_ok" "paired_inputs_ok"]
+  csv:to-file "../outputs/netlogo_sensitivity_raw.csv"
+    (fput columns rows)
+  print (word "PASS: wrote " (length rows)
+    " paired sensitivity rows to ../outputs/netlogo_sensitivity_raw.csv")
+  print "Use the Python analysis command to calculate means and 95% intervals."
+end
+
+;; =====================================================================
+;; Model verification and repeatable runtime benchmarks (milestone 3.3A).
+;; These are internal checks, NOT validation against observed NYC queues.
+;; Run from the Observer, with the forever go button switched off.
+;; =====================================================================
+
+to-report run-checked-scenario [case-label]
+  ;; Each trial starts from scratch; check conservation after EVERY tick.
+  setup
+  let observed-blocked-ticks 0
+  let queue-counted 0
+  repeat run-length [
+    let instant ticks
+    go
+    if not conservation-ok? [ error "Verification: cyclist conservation failed" ]
+    if requested-arrivals != (admitted-count + pending-arrivals) [
+      error "Verification: requested count differs from admitted plus pending"
+    ]
+    if admitted-count != (departed-count + count cyclists) [
+      error "Verification: admitted count differs from departed plus on-lane"
+    ]
+    if queue-now != (pending-arrivals + count (cyclists with [waiting?])) [
+      error "Verification: queue monitor differs from actual stalled cyclists"
+    ]
+    if pending-arrivals < 0 or queue-now < 0 or max-queue < queue-now [
+      error "Verification: negative or inconsistent queue statistics"
+    ]
+    set queue-counted (queue-counted + queue-now)
+    if queue-area != queue-counted [
+      error "Verification: accumulated queue area differs from per-tick sum"
+    ]
+    if (any? (cyclists with [
+        ycor != 0 or xcor < min-pxcor or xcor > max-pxcor or
+        stop-ticks < 0 or free-speed < 0.7 or free-speed >= 1.3
+      ])) [
+      error "Verification: agent outside lane or with invalid attributes"
+    ]
+
+    ;; update-obstruction executes at the START of this tick. The active
+    ;; interval includes its start tick and excludes its ending tick.
+    let should-be-blocked? (blockage-enabled = 1 and
+      instant >= blockage-start and
+      instant < (blockage-start + blockage-duration))
+    if obstruction-active? != should-be-blocked? [
+      error "Verification: truck active outside scheduled time window"
+    ]
+    let expected-trucks (ifelse-value should-be-blocked? [1] [0])
+    if (count trucks) != expected-trucks [
+      error "Verification: truck count does not match obstruction state"
+    ]
+    if should-be-blocked? [
+      set observed-blocked-ticks observed-blocked-ticks + 1
+    ]
+  ]
+  if ticks != run-length [ error "Verification: simulation ended at wrong tick" ]
+  report (list case-label seed-value arrival-rate-per-hour
+    blockage-enabled blockage-duration run-length
+    requested-arrivals admitted-count departed-count (count cyclists)
+    pending-arrivals max-queue queue-area mean-queue
+    mean-stop-completed observed-blocked-ticks conservation-ok?)
+end
+
+to run-verification-suite
+  let original-rate arrival-rate-per-hour
+  let original-blockage blockage-enabled
+  let original-start blockage-start
+  let original-duration blockage-duration
+  let original-seed seed-value
+  let original-length run-length
+  no-display
+  set blockage-start 45
+  set blockage-duration 65
+  set run-length 600
+  set seed-value 754
+
+  ;; Negative control: with no arrivals the street must stay empty.
+  set arrival-rate-per-hour 0
+  set blockage-enabled 0
+  let empty-row (run-checked-scenario "zero_demand")
+  if (item 6 empty-row) != 0 or (item 8 empty-row) != 0 or
+     (item 11 empty-row) != 0 or (item 12 empty-row) != 0 [
+    error "Verification: zero-demand control was not empty"
+  ]
+
+  set arrival-rate-per-hour 600
+  set blockage-enabled 0
+  let clear-row (run-checked-scenario "clear")
+  let clear-arrival-draws arrival-draws
+  let clear-speed-draws speed-draws
+
+  ;; Exact reproducibility: same seed and same controls, same results.
+  let repeat-row (run-checked-scenario "clear_repeat")
+  if (sublist clear-row 6 16) != (sublist repeat-row 6 16) or
+     arrival-draws != clear-arrival-draws or
+     speed-draws != clear-speed-draws [
+    error "Verification: identical clear-lane run was not reproducible"
+  ]
+
+  ;; Boundary test: enabled flag with zero duration must equal clear.
+  set blockage-enabled 1
+  set blockage-duration 0
+  let zero-row (run-checked-scenario "zero_duration")
+  if (sublist clear-row 6 16) != (sublist zero-row 6 16) or
+     (item 15 zero-row) != 0 [
+    error "Verification: zero-duration obstruction changed traffic"
+  ]
+
+  ;; Positive control: truck present for exactly the specified 65 ticks.
+  set blockage-duration 65
+  let blocked-row (run-checked-scenario "blocked")
+  if (item 15 blocked-row) != 65 [
+    error "Verification: truck was not present for 65 model ticks"
+  ]
+  if arrival-draws != clear-arrival-draws or
+     speed-draws != clear-speed-draws or
+     (item 6 blocked-row) != (item 6 clear-row) [
+    error "Verification: blocked and clear runs used different inputs"
+  ]
+  if (item 11 blocked-row) < (item 11 clear-row) or
+     (item 13 blocked-row) < (item 13 clear-row) [
+    error "Verification: fixed obstruction fixture lost its queue effect"
+  ]
+
+  let columns ["case" "seed" "arrival_rate_per_hour" "blockage_enabled"
+    "blockage_duration_s" "run_length_s" "requested" "admitted"
+    "departed" "on_lane" "pending" "peak_queue" "queue_area"
+    "mean_queue" "mean_stop_completed_s" "blocked_ticks" "verified"]
+  csv:to-file "../outputs/netlogo_verification_checks.csv"
+    (list columns empty-row clear-row repeat-row zero-row blocked-row)
+
+  set arrival-rate-per-hour original-rate
+  set blockage-enabled original-blockage
+  set blockage-start original-start
+  set blockage-duration original-duration
+  set seed-value original-seed
+  set run-length original-length
+  setup
+  display
+  print "PASS: 5 verification scenarios with per-tick invariants."
+  print "CSV saved: ../outputs/netlogo_verification_checks.csv"
+end
+
+to run-runtime-benchmarks
+  ;; This times NetLogo's go logic, NOT its first-time setup or graph drawing.
+  ;; Times depend on the computer, NetLogo version, and background activity.
+  let original-rate arrival-rate-per-hour
+  let original-blockage blockage-enabled
+  let original-start blockage-start
+  let original-duration blockage-duration
+  let original-seed seed-value
+  let original-length run-length
+  let rates [150 600 900]
+  let horizons [600 1200]
+  let blockage-flags [0 1]
+  let seeds [201 202 203]
+  let rows []
+  no-display
+  set blockage-start 45
+  set blockage-duration 65
+
+  ;; One unmeasured warmup reduces, but does not eliminate, JVM/JIT effects.
+  set arrival-rate-per-hour 300
+  set blockage-enabled 0
+  set seed-value 200
+  set run-length 100
+  setup
+  repeat 100 [ go ]
+
+  foreach rates [ rate ->
+    foreach horizons [ horizon ->
+      foreach blockage-flags [ flag ->
+        foreach seeds [ seed-number ->
+          set arrival-rate-per-hour rate
+          set blockage-enabled flag
+          set seed-value seed-number
+          set run-length horizon
+          setup
+          reset-timer
+          repeat run-length [ go ]
+          let elapsed-s timer
+          if elapsed-s <= 0 [
+            error "Benchmark: nonpositive elapsed time (timer resolution)"
+          ]
+          if not conservation-ok? [
+            error "Benchmark: cyclist conservation failed"
+          ]
+          if ticks != horizon [ error "Benchmark: unexpected model horizon" ]
+          let result (list rate flag horizon seed-number ticks
+            requested-arrivals departed-count (count cyclists) pending-arrivals
+            max-queue elapsed-s (1000 * elapsed-s / horizon)
+            conservation-ok?)
+          set rows (lput result rows)
+        ]
+      ]
+    ]
+    print (word "Benchmarked arrival rate " rate "/hr")
+  ]
+
+  let columns ["arrival_rate_per_hour" "blockage_enabled" "run_length_s"
+    "seed" "ticks" "requested" "departed" "on_lane" "pending"
+    "peak_queue" "elapsed_real_s" "ms_per_sim_tick" "conservation_ok"]
+  csv:to-file "../outputs/netlogo_runtime_benchmarks.csv"
+    (fput columns rows)
+
+  set arrival-rate-per-hour original-rate
+  set blockage-enabled original-blockage
+  set blockage-start original-start
+  set blockage-duration original-duration
+  set seed-value original-seed
+  set run-length original-length
+  setup
+  display
+  print (word "PASS: wrote " (length rows) " benchmark runs.")
+  print "CSV saved: ../outputs/netlogo_runtime_benchmarks.csv"
+end

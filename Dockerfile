@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# Self-contained Python reference simulator. NetLogo/DEVSJAVA are NOT bundled.
+# Self-contained Python reference simulator plus source-only NetLogo structure tests.
+# NetLogo/DEVS-Suite runtimes are NOT bundled.
 FROM python:3.12-slim-bookworm
 
 LABEL org.opencontainers.image.title="Cyclistics" \
@@ -11,7 +12,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# No pip download is required; current runtime is entirely Python standard library.
 RUN groupadd --system --gid 10001 cyclistics \
     && useradd --system --uid 10001 --gid cyclistics --home-dir /app cyclistics \
     && mkdir -p /app/outputs \
@@ -19,6 +19,7 @@ RUN groupadd --system --gid 10001 cyclistics \
 
 COPY --chown=cyclistics:cyclistics src/ ./src/
 COPY --chown=cyclistics:cyclistics tests/ ./tests/
+COPY --chown=cyclistics:cyclistics netlogo/ ./netlogo/
 
 USER cyclistics
 

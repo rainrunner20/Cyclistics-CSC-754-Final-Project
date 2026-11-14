@@ -38,3 +38,6 @@ Thumbs.db
 
 # Archives
 *.zip
+
+# Keep external DEVS-Suite libraries local.
+devsjava/vendor/*.jar
