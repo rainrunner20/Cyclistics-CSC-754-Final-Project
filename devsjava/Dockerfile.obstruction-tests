@@ -1,0 +1,15 @@
+# Runs only the obstruction-controller unit smoke tests.
+# The adapter in test_support mimics common DEVSJAVA signatures; it is NOT the course runtime.
+FROM eclipse-temurin:17-jdk-jammy
+WORKDIR /workspace
+COPY src/main/java/ src/main/java/
+COPY test_support/src/ test_support/src/
+RUN mkdir -p /workspace/build && \
+    javac -d /workspace/build \
+      test_support/src/GenCol/entity.java \
+      test_support/src/model/modeling/content.java \
+      test_support/src/model/modeling/message.java \
+      test_support/src/view/modeling/ViewableAtomic.java \
+      src/main/java/org/cyclistics/devs/ObstructionController.java \
+      test_support/src/org/cyclistics/devs/ObstructionControllerSmokeTests.java
+CMD ["java", "-cp", "/workspace/build", "org.cyclistics.devs.ObstructionControllerSmokeTests"]
