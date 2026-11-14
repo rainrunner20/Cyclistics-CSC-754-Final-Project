@@ -6,7 +6,7 @@
 
 Cyclistics investigates how bicycle-lane obstructions, cyclist arrival intensity, and hypothetical clearance policies influence **simulated** queueing, waiting time, and bottleneck throughput. The long-term architecture combines **DEVSJAVA discrete-event models** with a **NetLogo agent-based cycling model** and selected NYC transportation datasets.
 
-> **Implementation status (November 2026):** Python DES, a standalone NetLogo cyclist ABM, NYC bicycle-counter ingestion/quality checks, paired experiments, sensitivity analysis, and model-comparison tooling are implemented on the current development branch. The DEVSJAVA atomic/coupled code and real DEVS-Suite coordinator runner are maintained on the separate `feat/devs-atomic-models` branch and were verified on a two-cyclist deterministic scenario; they have **not yet been integrated into this branch**. Roboflow and ArcGIS remain optional future work. Simulated queues/delays are not field-validated NYC outcomes.
+> **Implementation status (November 2026):** Python DES, a standalone NetLogo cyclist ABM, NYC bicycle-counter ingestion/quality checks, paired experiments, sensitivity analysis, and model-comparison tooling are implemented on the current development branch. The DEVSJAVA atomic and coupled models are now integrated on `feat/final-integration`. Five production Java classes compiled against a local historical DEVS-Suite 2.1 JAR; its real coordinator reproduced the two-cyclist deterministic fixture (departures at 14 s and 24 s). Roboflow and ArcGIS remain optional future work. Simulated queues/delays are not field-validated NYC outcomes.
 
 ## Example output — synthetic scenarios
 
@@ -36,7 +36,7 @@ Run another synthetic demand level:
 docker compose run --rm simulation python -m cyclistics --rate 450 --seed 754 --output-dir /app/outputs
 ```
 
-**Scope of Docker:** It runs the Python simulation, analysis modules, and source-level tests; it does **not** run the NetLogo desktop GUI or bundle an external DEVS-Suite JAR. The external Java implementation lives on a separate feature branch. See [reproducibility](docs/reproducibility.md) for Linux bind-mount notes.
+**Scope of Docker:** It runs the Python simulation, analysis modules, and source-level tests; it does **not** run the NetLogo desktop GUI or bundle an external DEVS-Suite JAR. The Java model and its test scripts are included in this branch, but require a separately obtained local DEVS-Suite JAR for the real coordinator. See [reproducibility](docs/reproducibility.md) for Linux bind-mount notes.
 
 ## Run with Python
 
@@ -68,10 +68,25 @@ flowchart LR
     B --> F["Cross-model evidence report"]
     C --> G["Paired experiments + sensitivity analysis"]
     G --> F
-    H["DEVSJAVA coupled model (separate branch)"] -. "offline coordinator log" .-> F
+    H["DEVSJAVA coupled model (external JAR)"] -. "offline coordinator log" .-> F
 ```
 
 These models are **not** live-coupled. The Python/Java comparison uses one shared deterministic fixture; NetLogo is compared internally under matched draws. NYC counts can inform the demand rate, but simulated delays are not validated against NYC trajectories.
+
+## Run the integrated DEVSJAVA model
+
+The external DEVS-Suite library is **not distributed by this repository**. Place a compatible JAR in `devsjava/vendor/` locally (see [vendor instructions](devsjava/vendor/README.md)); the historical 2.1 JAR is **not** proven to be the exact CSC 754 course distribution. Docker Desktop is required for these scripts.
+
+```powershell
+.\devsjava\scripts\verify-real-devsjava.ps1
+.\devsjava\scripts\run-real-coupled.ps1
+```
+
+The coordinator's deterministic fixture uses two arrivals, a scheduled obstruction, and a fixed service headway. The observed departures were **14 s and 24 s**. The Python and Java implementations agreed for that fixture; this is **verification, not field validation**.
+
+The integrated Python suite last reported **139 passing tests** on November 14, 2026. Separate Java adapter tests and GitHub PR checks are release checkpoints, not part of that Python count.
+
+[Final integration verification](docs/final_integration_verification.md) · [External DEVSJAVA setup](docs/devsjava_runtime_check.md)
 
 ## NetLogo single-lane demonstration
 
@@ -99,7 +114,7 @@ cyclistics/
 ├── .github/workflows/ci.yml   # Python matrix and Docker smoke checks
 ├── src/cyclistics/            # Working reference simulator + CLI
 ├── tests/                     # Unit tests and timing edge cases
-├── devsjava/                  # Java docs / feature work on separate branch
+├── devsjava/                  # Java atomic/coupled models, scripts, adapter tests
 ├── netlogo/                   # NetLogo ABM source and runnable .nlogo
 ├── examples/results/          # Synthetic reproducibility fixture
 ├── docs/                      # Architecture, methods, roadmap, setup
@@ -112,7 +127,7 @@ cyclistics/
 
 ## Course relevance
 
-Cyclistics demonstrates event-list scheduling and FIFO queues (Python DES), DEVS atomic/coupled models and a coordinator-driven clock (in a separate Java feature branch), NetLogo ABM with spatial patches, reproducible paired experiments, and verification versus real-world validation. The [roadmap](docs/roadmap.md) contains earlier planning context; milestone results and current branch state are more authoritative.
+Cyclistics demonstrates event-list scheduling and FIFO queues (Python DES), DEVS atomic/coupled models and a coordinator-driven clock (integrated Java source), NetLogo ABM with spatial patches, reproducible paired experiments, and verification versus real-world validation. The [roadmap](docs/roadmap.md) contains earlier planning context; milestone results and current branch state are more authoritative.
 
 ## Documentation
 
