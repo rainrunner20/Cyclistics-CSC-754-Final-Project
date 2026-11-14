@@ -22,8 +22,8 @@ The merge was conflict-free and the resulting working tree was clean after pushi
 | Coordinator accounting | Java run summary | 2 generated, 2 departed, 2 obstruction events, maximum waiting queue 1, remaining 0 |
 | Desktop NetLogo visualization | Prior Milestone 3.6 desktop execution | Model executed to tick 600; cyclist conservation true |
 | NetLogo visual regression | Prior pre-visual versus green-lane experiment (seed 754) | Baseline/enhanced paired CSV exports had matching SHA-256 hashes |
-| Standalone Java adapter smoke suites | Dockerfiles in `devsjava/` | **Not rerun after this merge**; run before final PR review |
-| GitHub Actions on final integration PR | PR not created at this checkpoint | **Pending** |
+| Standalone Java adapter smoke suites | Five Docker builds and runs from the integrated branch | **All five passed**, 199 total assertions (24 generator, 58 obstruction, 87 bottleneck, 11 coupled-structure, 19 timestamp) |
+| GitHub Actions on PR #5 | [Run 43610161737](https://github.com/rainrunner20/Cyclistics-CSC-754-Final-Project/actions/runs/43610161737) on `a819a04` | **All four jobs passed**: Python 3.11, 3.12, 3.13 and Docker smoke test |
 
 The coordinator output from the integration run:
 
@@ -79,7 +79,7 @@ The current street view is a schematic, single-lane NetLogo demonstration, not a
 
 ## Remaining release checks
 
-1. Execute the five standalone Java adapter smoke suites in the integrated tree.
-2. Check that CI passes when the integration pull request is opened.
-3. Review README, model scope, all reproducibility commands, and binary dependency exclusion.
-4. Merge the integration PR into `main` without deleting the original feature branches.
+1. **Completed:** five Java adapter smoke suites passed (199 assertions).
+2. **Completed:** GitHub Actions passed for PR #5 (`a819a04`): three Python versions and Docker.
+3. **Completed:** project documentation, model scope, and local dependency guidance reviewed and updated; PowerShell diff whitespace check passed and working tree was clean.
+4. **Pending:** final review and squash merge PR #5 into `main`, preserving all original feature branches and worktrees. Recheck the exact PR head and CI status if any further commits are made.
