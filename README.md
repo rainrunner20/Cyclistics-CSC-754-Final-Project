@@ -96,6 +96,20 @@ A controlled regression of the pre-visual and enhanced versions used **600 cycli
 
 [NetLogo visual design](docs/netlogo_visual_design.md) · [Desktop verification and comparison results](docs/netlogo_visual_regression_results.md) · [Cross-model comparison](docs/cross_model_comparison_results.md)
 
+## Research evidence for CSC 754
+
+The NetLogo sensitivity study uses **4 demand rates × 4 obstruction durations × 10 random seeds** (160 paired records). The research exporter validates a **real NetLogo CSV**, then produces a 16-row paper table, two queue-response SVG figures, and an evidence manifest with SHA-256 provenance. The program does **not** generate or invent experimental observations.
+
+Run the NetLogo **Run sensitivity study** procedure first to create the ignored `outputs/netlogo_sensitivity_raw.csv` file. Then, from the repository root:
+
+```powershell
+docker compose run --build --rm simulation python -m cyclistics.research_evidence --input /app/outputs/netlogo_sensitivity_raw.csv --model /app/netlogo/Cyclistics_Bike_Lane_ABM.nlogo --output-dir /app/outputs/research_evidence
+```
+
+Only summarize the resulting numbers once the raw export has passed validation. The paired 95% intervals quantify variation among **simulated** replicates, not measured NYC delays or statistical agreement with the Java DEVS model.
+
+[Milestone 3.8 research design](docs/research_evidence_plan.md) · [Copy-paste reproduction guide](docs/research_evidence_howto.md) · [Recorded sensitivity findings and uncertainty](docs/research_sensitivity_findings.md)
+
 ## Baseline experiments
 
 | Scenario | Obstruction | Comparison |
