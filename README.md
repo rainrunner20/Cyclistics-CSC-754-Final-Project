@@ -108,7 +108,7 @@ docker compose run --build --rm simulation python -m cyclistics.research_evidenc
 
 Only summarize the resulting numbers once the raw export has passed validation. The paired 95% intervals quantify variation among **simulated** replicates, not measured NYC delays or statistical agreement with the Java DEVS model.
 
-[Milestone 3.8 research design](docs/research_evidence_plan.md) · [Copy-paste reproduction guide](docs/research_evidence_howto.md)
+[Milestone 3.8 research design](docs/research_evidence_plan.md) · [Copy-paste reproduction guide](docs/research_evidence_howto.md) · [Recorded sensitivity findings and uncertainty](docs/research_sensitivity_findings.md)
 
 ## Baseline experiments
 
