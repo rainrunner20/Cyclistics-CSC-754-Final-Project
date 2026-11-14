@@ -1,7 +1,9 @@
 # Milestone 2.1C — LaneBottleneck (atomic model)
 
-**Branch:** `feat/devs-atomic-models`  
+**Branch:** `feat/devs-atomic-models`
 **Status:** Java atomic-model logic and isolated adapter tests. Actual course DEVSJAVA coordinator integration is **not verified yet**.
+
+**Current verification (November 14, 2026):** The production Java sources have been merged into `feat/final-integration`; five classes compile against the external historical DEVS-Suite 2.1 JAR, and the coupled coordinator ran the deterministic two-cyclist fixture (departures at 14 s and 24 s). This does not establish field validation or equivalence to the course-provided distribution.
 
 ## What problem does it solve?
 
