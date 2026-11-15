@@ -50,6 +50,18 @@ python -m unittest discover -s tests -v
 
 The simulator itself requires no third-party Python runtime dependencies.
 
+## Interactive Event Inspector + Policy Lab (Python DES)
+
+A dark-mode browser lab can replay **actual Python reference event traces**, inspect the post-event queue/phase, step through same-time ordering, and compare no blockage versus normal/early clearance under identical seeded arrivals. The viewer is **not** the NetLogo GUI, an executed Java coordinator trace, or a live NYC digital twin.
+
+~~~powershell
+python -m pip install -e .
+python -m cyclistics.visual_lab --output outputs/visual_lab.json
+python -m http.server 8000 --directory web
+~~~
+
+Open `http://localhost:8000/lab.html` and import `outputs/visual_lab.json`. See [the visual lab guide](docs/visual_lab_quickstart.md) for experiments, verification, and limitations. The ArcGIS map remains separately available at `http://localhost:8000/`.
+
 ## Research objectives
 
 1. Compare the effect of obstruction duration on simulated waiting time and queue length.

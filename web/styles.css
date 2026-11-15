@@ -37,3 +37,6 @@ footer { padding: 11px 24px; color: #8fb2a6; font-size: 11px; border-top: 1px so
   .panel { border-right: 0; border-bottom: 1px solid #314646; }
   .map-wrap { height: 490px; }
 }
+
+.lab-link { color: #e5fff0; border: 1px solid #6cc6a1; padding: 9px 13px; border-radius: 9px; text-decoration: none; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.lab-link:hover { background: #245645; }

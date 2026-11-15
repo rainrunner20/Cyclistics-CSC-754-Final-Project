@@ -30,6 +30,11 @@ jobs:
         run: cyclistics --rate 300 --seed 754 --output-dir outputs/ci
       - name: Check CSV output
         run: python -c "from pathlib import Path; assert Path('outputs/ci/scenario_metrics.csv').is_file()"
+      - name: Export visual lab trace and verify provenance
+        run: |
+          python -m cyclistics.visual_lab --output outputs/ci/visual_lab.json
+          python -c "import json; from pathlib import Path; d=json.loads(Path('outputs/ci/visual_lab.json').read_text()); assert d['engine']=='python_des_reference' and d['data_status']=='synthetic' and len(d['scenarios'])==3"
+
 
   docker:
     name: Docker smoke test
