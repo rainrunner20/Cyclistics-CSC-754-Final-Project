@@ -1,6 +1,7 @@
 # Cyclistics — final submission status and evidence ledger
 
 **Checkpoint:** November 14, 2026 (America/New_York; some GitHub Actions runs are timestamped November 15 UTC).  
+**Version note:** This page describes the **original verified v1 course-research baseline** before the separate v2 extension work. The later experimental CV, ArcGIS, mixed traffic and offline integration checkpoints are recorded in [Cyclistics v2 release status](v2_extension_release_status.md); its prototype results do not retroactively change these v1 scientific findings.
 **Scope:** CSC 754 individual prototype, not a deployed or field-validated NYC digital twin.
 
 This is a current-status index. Older milestone documents describe what was *planned or true at that time*. Preserve them for development history, but use this file and the linked result reports for the final paper.
