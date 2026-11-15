@@ -45,7 +45,32 @@ jobs:
           test -s "$GITHUB_WORKSPACE/outputs/v2_behaviorspace.csv"
           echo 'Headless mixed-traffic output:'
           tail -n 8 "$GITHUB_WORKSPACE/outputs/v2_behaviorspace.csv"
-          grep -q "true" "$GITHUB_WORKSPACE/outputs/v2_behaviorspace.csv"
+          "$NETLOGO_HEADLESS" \
+            --model "$GITHUB_WORKSPACE/netlogo/Cyclistics_Mixed_Traffic_v2.nlogo" \
+            --setup-file "$GITHUB_WORKSPACE/netlogo/behaviorspace_v2.xml" \
+            --experiment cyclistics-v2-replay \
+            --table "$GITHUB_WORKSPACE/outputs/v2_replay_behaviorspace.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/v2_replay_behaviorspace.csv"
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          def read(path):
+              rows = list(csv.reader(Path(path).open(encoding="utf-8", newline="")))
+              start = next(i for i,row in enumerate(rows) if row and row[0] == "[run number]")
+              return [dict(zip(rows[start], r)) for r in rows[start+1:] if r]
+          main = read("outputs/v2_behaviorspace.csv")
+          assert len(main) == 2, main
+          assert {r["merging-enabled"] for r in main} == {"0", "1"}
+          assert all(r["conservation-ok?"] == "true" for r in main)
+          assert all(r["lane-spacing-ok?"] == "true" for r in main)
+          assert int(next(r["merge-events"] for r in main if r["merging-enabled"] == "0")) == 0
+          replay = read("outputs/v2_replay_behaviorspace.csv")
+          assert len(replay) == 1, replay
+          assert replay[0]["conservation-ok?"] == "true"
+          assert replay[0]["lane-spacing-ok?"] == "true"
+          assert int(replay[0]["observed-blocked-ticks"]) == 8, replay
+          print("PASS: two mixed-traffic conditions, conservation, spacing, and 8 replayed block ticks")
+          PY
 
       - name: Save actual experimental model output
         uses: actions/upload-artifact@v4
@@ -53,4 +78,6 @@ jobs:
           name: cyclistics-v2-headless-mixed-traffic
           retention-days: 30
           if-no-files-found: error
-          path: outputs/v2_behaviorspace.csv
+          path: |
+            outputs/v2_behaviorspace.csv
+            outputs/v2_replay_behaviorspace.csv
