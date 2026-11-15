@@ -1,0 +1,34 @@
+<experiments>
+  <experiment name="cyclistics-v2-end-to-end" repetitions="1" runMetricsEveryStep="false">
+    <setup>run-v2-replay "../outputs/v2_demo/netlogo_obstruction_events.csv"
+csv:to-file "../outputs/v2_demo/v2_replay_trajectories.csv"
+  (fput ["tick_s" "type" "agent_id" "x_patch" "lane_y"
+         "desired_speed_patches_per_tick" "merged"] trajectory-rows)</setup>
+    <go>stop</go>
+    <timeLimit steps="1"/>
+    <metric>conservation-ok?</metric>
+    <metric>lane-spacing-ok?</metric>
+    <metric>observed-blocked-ticks</metric>
+    <metric>merge-events</metric>
+    <metric>requested-arrivals</metric>
+    <metric>cars-requested</metric>
+    <enumeratedValueSet variable="arrival-rate-per-hour">
+      <value value="900"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="car-rate-per-hour">
+      <value value="600"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blockage-enabled">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="merging-enabled">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-value">
+      <value value="754"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="run-length">
+      <value value="300"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
