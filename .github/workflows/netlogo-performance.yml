@@ -1,0 +1,96 @@
+name: NetLogo headless performance (cloud runner)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/netlogo-performance.yml'
+      - 'netlogo/behaviorspace_performance.xml'
+      - 'netlogo/Cyclistics_Bike_Lane_ABM.nlogo'
+      - 'src/cyclistics/performance_evidence.py'
+
+permissions:
+  contents: read
+
+jobs:
+  measured-netlogo:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python analysis
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install official NetLogo 6.3.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/netlogo"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/netlogo-6.3.0.tgz" \
+            "https://downloads.netlogo.org/6.3.0/NetLogo-6.3.0-64.tgz"
+          tar -xzf "$RUNNER_TEMP/netlogo-6.3.0.tgz" -C "$RUNNER_TEMP/netlogo"
+          headless="$(find "$RUNNER_TEMP/netlogo" -type f -name netlogo-headless.sh -print -quit)"
+          if [[ -z "$headless" ]]; then
+            echo 'NetLogo installation does not include netlogo-headless.sh' >&2
+            exit 1
+          fi
+          chmod +x "$headless"
+          echo "NETLOGO_HEADLESS=$headless" >> "$GITHUB_ENV"
+          echo "Running $(basename "$headless") on GitHub-hosted Ubuntu"
+          java -version
+
+      - name: Execute actual NetLogo verification and 36 timed runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/outputs"
+          cd "$GITHUB_WORKSPACE/netlogo"
+          "$NETLOGO_HEADLESS" \
+            --model "$GITHUB_WORKSPACE/netlogo/Cyclistics_Bike_Lane_ABM.nlogo" \
+            --setup-file "$GITHUB_WORKSPACE/netlogo/behaviorspace_performance.xml" \
+            --experiment cyclistics-headless-performance \
+            --table "$GITHUB_WORKSPACE/outputs/behaviorspace_performance.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/netlogo_verification_checks.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/netlogo_runtime_benchmarks.csv"
+
+      - name: Validate measured CSVs and generate figures
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=src python -m cyclistics.performance_evidence \
+            --verification outputs/netlogo_verification_checks.csv \
+            --benchmarks outputs/netlogo_runtime_benchmarks.csv \
+            --model netlogo/Cyclistics_Bike_Lane_ABM.nlogo \
+            --output-dir outputs/performance_evidence
+          echo "Cloud runner details:"
+          uname -a
+          python --version
+
+      - name: Save reproducibility metadata
+        shell: bash
+        run: |
+          {
+            echo "environment=github-hosted-ubuntu-22.04"
+            echo "commit=$GITHUB_SHA"
+            echo "runner_os=$RUNNER_OS"
+            echo "netlogo_version=6.3.0"
+            echo "java_version=$(java -version 2>&1 | head -n 1)"
+            echo "python_version=$(python --version)"
+            echo "measurement_scope=GitHub runner wall-clock time; not user's Windows PC"
+          } > outputs/performance_evidence/runner_environment.txt
+
+      - name: Upload genuine headless NetLogo output (not tracked in Git)
+        uses: actions/upload-artifact@v4
+        with:
+          name: netlogo-performance-headless
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            outputs/netlogo_verification_checks.csv
+            outputs/netlogo_runtime_benchmarks.csv
+            outputs/behaviorspace_performance.csv
+            outputs/performance_evidence/
