@@ -12,7 +12,7 @@ git status
 Test-Path .\outputs\netlogo_sensitivity_raw.csv
 ```
 
-The branch should be `feat/research-evidence`. Git should report a clean working tree, excluding generated files. If `Test-Path` is `True`, inspect the actual export:
+Use up-to-date `main` (after merged PR #6) or a dedicated working branch with the same research code. Git should report a clean working tree, excluding generated files. If `Test-Path` is `True`, inspect the actual export:
 
 ```powershell
 $raw = ".\outputs\netlogo_sensitivity_raw.csv"
@@ -39,7 +39,7 @@ This procedure runs 200 model executions (including baseline runs) and records 1
 docker compose run --build --rm tests
 ```
 
-The prior integrated repository had **139 tests**. Milestone 3.8A adds six evidence-package unit tests; the expected complete test count after these commits is **145**, if all pass. These tests use in-memory synthetic fixtures **only to check the analysis program**.
+The merged `main` branch currently runs **151 Python/source-level tests** (after PRs #6 and #7). Six tests specifically exercise this research evidence exporter; their synthetic fixtures **only check the analysis program**, never form paper observations.
 
 ## 3. Export actual research table and plots
 
