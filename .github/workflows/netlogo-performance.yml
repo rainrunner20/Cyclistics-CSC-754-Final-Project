@@ -2,6 +2,12 @@ name: NetLogo headless performance (cloud runner)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [feat/performance-evidence]
+    paths:
+      - '.github/workflows/netlogo-performance.yml'
+      - 'netlogo/behaviorspace_performance.xml'
+      - 'netlogo/Cyclistics_Bike_Lane_ABM.nlogo'
   pull_request:
     paths:
       - '.github/workflows/netlogo-performance.yml'
