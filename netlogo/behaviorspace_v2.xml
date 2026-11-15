@@ -1,0 +1,41 @@
+<experiments>
+  <experiment name="cyclistics-v2-mixed" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="300"/>
+    <metric>conservation-ok?</metric>
+    <metric>requested-arrivals</metric>
+    <metric>cars-requested</metric>
+    <metric>departed-count</metric>
+    <metric>cars-departed</metric>
+    <metric>merge-events</metric>
+    <metric>return-events</metric>
+    <metric>potential-conflict-ticks</metric>
+    <metric>minimum-ttc-s</metric>
+    <enumeratedValueSet variable="arrival-rate-per-hour">
+      <value value="900"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="car-rate-per-hour">
+      <value value="600"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blockage-enabled">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="merging-enabled">
+      <value value="0"/>
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blockage-start">
+      <value value="45"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blockage-duration">
+      <value value="120"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-value">
+      <value value="754"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="run-length">
+      <value value="300"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
