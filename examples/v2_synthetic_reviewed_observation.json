@@ -1,0 +1,16 @@
+{
+  "schema": "cyclistics.observation.v1",
+  "observation_id": "synthetic-camera-frame-001",
+  "source": "synthetic_fixture",
+  "observed_at_utc": "2026-11-14T16:30:00Z",
+  "object_class": "truck",
+  "confidence": 0.9,
+  "bbox_norm_xyxy": [
+    0.25,
+    0.2,
+    0.75,
+    0.8
+  ],
+  "lane_overlap": true,
+  "segment_id": "model-segment"
+}
