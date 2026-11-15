@@ -2,6 +2,17 @@
 
 This is a measured benchmark workflow. It **does not** fabricate runtime numbers or infer NYC traffic outcomes.
 
+## Option A — Run everything on GitHub without VS Code or local NetLogo
+
+The optional [headless NetLogo GitHub Actions workflow](../.github/workflows/netlogo-performance.yml) downloads official **NetLogo 6.3.0 for Linux**, executes the existing verification and runtime procedures, and uses `cyclistics.performance_evidence` to package **actual timed measurements**.
+
+- The first successful run was [GitHub Actions #43666376890](https://github.com/rainrunner20/Cyclistics-CSC-754-Final-Project/actions/runs/43666376890). Its source commit is `a556870`.
+- Download the archived CSVs, SVG figures, manifest and machine metadata from the [run's NetLogo artifact](https://github.com/rainrunner20/Cyclistics-CSC-754-Final-Project/actions/runs/43666376890/artifacts/14141653620). These are generated outputs, not committed Git data.
+- [The recorded results and caveats](performance_evidence_results.md) describe the 36 measured runs. The original timed trials are **GitHub-hosted Linux** measurements, not your Windows-PC performance. The server can vary between future runs.
+- Once the workflow reaches the repository's default branch, GitHub's **Actions → NetLogo headless performance (cloud runner) → Run workflow** can execute it again manually. Until then, the feature PR's qualifying changes exercise it during review.
+
+This avoids needing to connect VS Code. Use the local procedure below if you specifically need **Windows-machine** runtime results for your final report.
+
 ## Step 1 — Open the performance branch (Windows PowerShell)
 
 From your Cyclistics repository root, ensure the current worktree is clean before switching:
