@@ -56,7 +56,7 @@ def _write_table_csv(rows: list[dict[str, float | int]], path: Path) -> None:
 
 def _write_table_md(rows: list[dict[str, float | int]], path: Path) -> None:
     lines = [
-        "# NetLogo computational performance — measured desktop runs",
+        "# NetLogo computational performance — measured NetLogo runs",
         "",
         "These are locally measured wall-clock runtimes for a simulated",
         "one-lane cyclist model, not NYC field observations or physical travel time.",
