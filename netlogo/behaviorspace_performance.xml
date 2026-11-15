@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<experiments>
+  <experiment name="cyclistics-headless-performance" repetitions="1" runMetricsEveryStep="false">
+    <setup>run-verification-suite
+run-runtime-benchmarks</setup>
+    <go>stop</go>
+    <timeLimit steps="1"/>
+    <metric>ticks</metric>
+  </experiment>
+</experiments>
