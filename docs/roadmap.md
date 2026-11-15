@@ -12,18 +12,18 @@
 | 5 | NYC count ingestion, stream quality and candidate rate | **Implemented**, but real count stream remains provisional and unverified |
 | 6A | Paired NetLogo sensitivity study and paper figures | **Complete**; 160 paired rows, 16 summaries, 95% within-model intervals ([findings](research_sensitivity_findings.md)) |
 | 6B | NetLogo computational performance evidence | **Complete**; 36 measured GitHub-hosted trials, 12 summaries ([performance](performance_evidence_results.md)) |
-| 7 | Advanced CV, ArcGIS, co-simulation, motor traffic, cyclist lane changes and surrogate safety | **Approved experimental v2 backlog**; design and observation-contract foundation only, **not** a functioning integrated extension |
+| 7 | Experimental v2 CV, ArcGIS, event replay, motor traffic, merging, conflict proxies | **Prototype components implemented and offline replay verified**; no actual hosted camera inference, live synchronization, or field validation |
 | 8 | Final individual paper, presentation and packaged evidence | **In preparation**; [final report blueprint](final_report_presentation_plan.md) |
 
 ## Experimental v2 roadmap (separate from verified v1)
 
-The user chose to pursue **all five** advanced extensions after the initial CSC 754 core was completed. They are tracked in [the advanced extensions plan](advanced_extensions_plan.md) and [ADR 0003](decisions/0003-protect-v1-while-extending.md). Start with an observation contract and regression tests; then build and test each of the following as independent deliverables:
+The user chose to pursue **all five** advanced extensions after the initial CSC 754 core was completed. They were implemented as **experimental v2 prototype components** and documented in [the extension status and evidence ledger](v2_extension_release_status.md), [the advanced extensions plan](advanced_extensions_plan.md), and [ADR 0003](decisions/0003-protect-v1-while-extending.md). The remaining *live/deployed* requirements are separate from the working offline prototypes:
 
-1. Optional Roboflow computer-vision inference with an actual image/video and reviewed lane-overlap decision.
-2. An ArcGIS scenario map using grounded NYC geometry and labeled synthetic simulation results.
-3. Python/DEVS-Suite/NetLogo deterministic event replay, followed by true live orchestration only if clocks and message delivery are verified.
-4. A separately named mixed-traffic NetLogo model containing a motor-vehicle lane, seeded car agents and traffic interaction logic.
-5. Realistic-for-the-model cyclist lane-choice rules and computed conflict proxies (e.g. TTC/PET), **not** unvalidated crash probability.
+1. **Roboflow adapter implemented, provider execution pending:** the optional image-inference SDK interface is coded/tested, but actual footage, model ID, credentials and an independently reviewed lane-overlap decision remain external.
+2. **ArcGIS viewer implemented, browser/location verification pending:** JavaScript and GeoJSON source validation passed, but no deployed/fully user-tested map or verified segment coordinate is supplied.
+3. **Offline Python → Java parser → real NetLogo replay verified:** 8 simulated blocked ticks, conservation, 4,820 exported trajectory rows and analysis in GitHub. Actual new Java external-coordinator runner and real-time synchronization still require additional tests/engineering.
+4. **Mixed-traffic NetLogo v2 executed:** two seeded lanes, car agents, cyclist merges and replay were run in genuine NetLogo 6.3.0. Kinematics remain idealized; real-world validation is absent.
+5. **Cyclist merging and proxy analysis executed:** per-tick conservation/gaps, 17 TTC-like snapshots and four same-point separation pairs from 6,217 model-produced trajectory rows; no claim of validated PET/crash probabilities.
 
 The experimental work must not overwrite the 160-pair v1 sensitivity measurements or source digests, and **does not replace completion of the individual paper and presentation**.
 

@@ -116,6 +116,18 @@ The separate GitHub Actions [headless NetLogo workflow](.github/workflows/netlog
 
 [Measured runtime results and environment](docs/performance_evidence_results.md) · [Reproduction guide](docs/performance_evidence_howto.md) · [Headless GitHub workflow](.github/workflows/netlogo-performance.yml)
 
+## Experimental v2: vision, maps, traffic, event replay, and conflicts
+
+After the v1 sensitivity work, Cyclistics added an **experimental** mixed-traffic system, keeping the original one-lane NetLogo model and previously recorded data intact. See the [verified extension status and evidence](docs/v2_extension_release_status.md) before citing any new outcomes.
+
+- **Car traffic and merges:** `netlogo/Cyclistics_Mixed_Traffic_v2.nlogo` contains separate cyclist and car agents on two schematic lanes, gap-accepted cyclist merges, conservation checks, trajectory exports, and a TTC-like exposure proxy.
+- **Conflict analysis:** `cyclistics.v2_conflicts` derives TTC-like and same-point crossing-gap *surrogates* from real NetLogo-generated trajectory CSVs, with source hashes. These are **not predicted crashes or measured NYC near misses**.
+- **Computer vision:** `cyclistics.roboflow_adapter` supports optional real model inference and emits *unconfirmed* detections. Hosted image inference still requires a user's trained/selected model, credentials, and authorized actual footage.
+- **ArcGIS map viewer:** `web/` contains a browser-based GeoJSON scenario viewer with time filters and provenance labels; it requires real source-backed WGS84 coordinates for map pins, not schematic NetLogo patch coordinates.
+- **Offline coordination:** `cyclistics.v2_demo` and `cyclistics.v2_event_bridge` create validated synthetic events; Java 17 parses their actual exported CSV; real headless NetLogo reads and runs the same event schedule. The [GitHub integrated run](https://github.com/rainrunner20/Cyclistics-CSC-754-Final-Project/actions/runs/43671793377) passed, and the **186-test** Python suite passed. The new configurable Java DEVS-Suite runner still needs a genuine local external-JAR test. This is *offline replay*, not live bidirectional synchronization.
+
+[Quickstart](docs/v2_integrations_quickstart.md) · [Mixed-traffic results](docs/v2_mixed_traffic_results.md) · [Trajectory conflict methods](docs/v2_conflict_proxy_methods.md) · [End-to-end replay evidence](docs/v2_end_to_end_offline_demo.md)
+
 ## Baseline experiments
 
 | Scenario | Obstruction | Comparison |
@@ -151,7 +163,7 @@ Cyclistics demonstrates event-list scheduling and FIFO queues (Python DES), DEVS
 
 ## Documentation
 
-[Current architecture](docs/architecture.md) · [Project scope](docs/project_scope.md) · [Final status and evidence](docs/final_submission_status.md) · [Paper/presentation blueprint](docs/final_report_presentation_plan.md) · [Reproducibility](docs/reproducibility.md) · [GitHub publishing](docs/github_setup.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
+[Current architecture](docs/architecture.md) · [V2 experimental status](docs/v2_extension_release_status.md) · [Project scope](docs/project_scope.md) · [Final status and evidence](docs/final_submission_status.md) · [Paper/presentation blueprint](docs/final_report_presentation_plan.md) · [Reproducibility](docs/reproducibility.md) · [GitHub publishing](docs/github_setup.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
 ## License
 
