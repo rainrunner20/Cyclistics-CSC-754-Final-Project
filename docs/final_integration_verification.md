@@ -1,5 +1,7 @@
 # Final integration verification — CSC 754 Cyclistics
 
+> **Historical checkpoint (pre-PR #5 merge):** This document preserves the recorded November 14 integration tests and decisions at that time. Since then, PRs #5–#7 were squash-merged into `main`; GitHub CI on `cef4aa7` passed 151 Python tests and 4/4 CI jobs. For **current** status and reproduction, see [final submission status](final_submission_status.md) and [reproducibility](reproducibility.md). Statements below saying a PR was still pending refer to the original checkpoint, not today's release status.
+
 ## Integration checkpoint — November 14, 2026
 
 The working integration branch `feat/final-integration` combines the previously separate Python discrete-event reference, NetLogo bicycle-lane ABM, NYC data preparation/quality checks, and DEVS-Suite Java atomic/coupled models. It is not yet the final released `main` branch.

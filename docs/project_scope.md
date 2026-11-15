@@ -1,78 +1,44 @@
-# Cyclistics — scope, design, and experiments
+# Cyclistics — delivered scope and research questions
 
-## Scope and core hypothesis
-An idealized NYC bicycle-lane segment is the case study. The target outcomes are *simulation estimates* of delay, queue length, passage throughput, and lane-change exposure when an obstruction occurs. No inference about actual crash probability is justified.
+## Research aim
 
-**Questions**
-1. How does blockage duration change average/p95 cyclist delay and maximum queue?
-2. Does shorter obstruction-clearance time reduce delay?
-3. How do cyclist demand and behavioral differences affect queueing and lane-change exposure?
-4. Which model assumptions materially change the results (sensitivity analysis)?
+Cyclistics explores how temporary bicycle-lane obstructions affect queues **inside an idealized, single-lane simulation**. It compares multiple simulation formalisms as a teaching and engineering exercise, not as a verified road-safety forecast for a specific NYC street.
 
-## Dataflow
+The developed system reports **synthetic** model responses, internal verification results, and a hardware-specific computational runtime study. Some official NYC cyclist counts are used to construct **provisional arrival-rate inputs**, but the queue and delay outputs have not been externally validated.
 
-```
-NYC bicycle counts + bike routes (+ 311 descriptive indicators)
-                 | parameter extraction, quality checks
-                 v
-         Python inputs/scenarios
-                 | event list reference + CSV export
-                 v
-      DEVSJAVA event model (planned)
-         | atomic generator, obstruction controller, bottleneck service
-         | coupled wiring + clocks + simultaneous-event semantics
-                 v
-      event CSV (timestamps and blockage state)
-                 v
-        NetLogo ABM (planned)
-         | cyclist turtles, lane patches, heterogenous behavior
-         | measures queue, passing, stopping, merge exposure
-                 v
-      repeated runs, comparison, uncertainty, plots
-                 v
-        optional ArcGIS visual/report (not core)
-```
+## Implemented questions
 
-**Important integration nuance:** Java DEVS models may be *coupled to each other* using DEVSJAVA ports. Transferring DEVSJAVA event traces into NetLogo via CSV is an **offline sequential pipeline**, not a single tightly coupled DEVS-NetLogo co-simulation. Do not call the latter a coupled DEVS model.
+1. **Demand and obstruction duration:** how do 150/300/600/900 attempted cyclists per hour and 0/30/60/120-second blockages affect NetLogo's *average waiting count* and *peak waiting count*? Answered in [160 paired records and 16 summaries](research_sensitivity_findings.md).
+2. **Clearance policies:** how do different obstruction intervals affect the Python FIFO bottleneck under the **same** synthetic arrival schedule? See reproducible scenarios in [README](../README.md).
+3. **Correctness of a shared event schedule:** do the Python reference and a real historical Java DEVS-Suite coordinator report departures at 14 and 24 seconds for the two-cyclist fixture? [Yes, for this fixture](cross_model_comparison_results.md).
+4. **Computational cost:** how long do 600- and 1,200-tick NetLogo runs take under three demand settings with/without obstruction on a specific GitHub-hosted Linux runner? [36 actual runtime measurements](performance_evidence_results.md), with strong caveats about millisecond-level jitter.
 
-## Planned DEVSJAVA atomic models
-- `CyclistGenerator`: internal events schedule cyclist-arrival outputs at event times.
-- `ObstructionController`: emits blocked/cleared control events (scheduled exogenous windows), including a clearance-policy parameter.
-- `LaneBottleneck`: state = `(phase, queue, server_state, next_service_time)`; external inputs = cyclist arrival or obstruction state; internal transition = service completion; outputs = cyclist departure/queue samples.
-- `CyclisticsCoupled`: EIC/EOC/IC wiring generator/controller/bottleneck; deterministic confluence policy for simultaneous event arrivals.
+## What the three models represent
 
-Formalism to include in report: `M = <X, S, Y, δint, δext, λ, ta>` and elapsed time `e` on external transitions. Explicitly document whether the framework requires a confluent transition `δcon` at same-time internal and external events; do not assume any generic priority order is the DEVSJAVA default.
+**Python DES** represents discrete arrivals, obstruction transitions and a single FIFO server using an event queue. It reports wait and completion metrics. Its fixed passage times and stochastic arrival assumptions are not reconstructed cyclist trajectories.
 
-## Planned NetLogo ABM
-- Patches represent segment locations / bike lane and adjacent traffic-exposure area.
-- Turtles represent cyclists; parameters = desired speed, patience, cautious/aggressive merge preference.
-- At each tick (e.g., 1 simulated second), rider moves, slows/stops, waits, or merges to pass a blocked segment according to local rules.
-- Obstruction state changes imported using event CSV timestamps from the reference/DEVS model. A tick-based ABM approximates time by rounding or interpolating event times; document that the models use different time advancement rules.
-- If adjacent motor traffic is not explicitly simulated, label outcomes *merge exposure* rather than measured collisions or crash risk.
+**Java DEVS-Suite** includes a `CyclistGenerator`, `ObstructionController`, and `LaneBottleneck` connected by `CyclisticsCoupledModel`. The historical external coordinator manages discrete-event timing. A formal atomic model can be written as `M = (X, S, Y, δint, δext, λ, ta)` plus `δcon` for coincident internal/external events. See [bottleneck design](devs_bottleneck_design.md), [generator design](devs_generator_design.md), [obstruction design](devs_obstruction_design.md), and [coupled port diagram](devs_coupled_model.md).
 
-## NYC data
-- NYC DOT `Bicycle and Pedestrian Counts` dataset (`ct66-47at`) for empirical arrival-rate/time-of-day inputs where coverage exists.
-- Sensor locations (`6up2-gnw8`) to associate counts with geography.
-- NYC `New York City Bike Routes` (`mzxg-pwib`) for lane geometry / type.
-- NYC 311 `Blocked Bike Lane` under Illegal Parking as a complaint indicator, not as actual blockade duration / incidence ground truth.
-- **Start with synthetic rates** until a sensor/segment match is vetted. A counter may not be located on the exact segment modeled.
+**NetLogo ABM** places cyclist agents on a spatially schematized single lane and updates movement, obstruction and waiting every second. The adjacent asphalt and sidewalk are visualization only; modeled riders do not overtake or change lanes, and there is no simulation of motor traffic or crashes.
 
-## Experimental plan
-- At least 4 scenarios: clear, blocked 5 min, cleared after 1 min, repeated obstruction.
-- Parameter sweeps: demand 150/300/450 per hour; blockage 1/3/5 minutes; behavior mixes; service headway / max density.
-- Repeated seeds (at least 10 per condition for final analysis; e.g., 30 if time permits).
-- Report mean/p95 delay, max queue, throughput; in ABM: stopping events and merge exposure.
-- Compare clear-vs-blocked under identical arrival seeds; report uncertainty (mean and spread).
+The systems are run and verified **separately**. The Java atomic models are coupled *within* Java using DEVS ports; NetLogo is not synchronously coupled to Java.
 
-## Verification and validation
-- Verification: zero-demand test, deterministic-seed test, block increases delay under test inputs, correct event-time tie handling, conservation of cyclists, no negative queue lengths, obstruction end unblocks service.
-- Sensitivity: vary assumptions, show which patterns remain stable.
-- Validation: if feasible, compare simulated *unobstructed cyclist counts* aggregated to observed counter intervals; where no matched ground truth exists, state results demonstrate **scenario behavior** not predictive accuracy. Counts cannot independently validate queue lengths, blockage durations, or individual delays.
-- Runtime: benchmark number of events/agents vs wall-clock time; distinguish Python, DEVSJAVA, NetLogo setups.
+## Data and measurement boundaries
 
-## Implementation milestones
-1. Python reference and deterministic tests (this starter).
-2. Formal DEVS model specification and DEVSJAVA atomic/coupled implementation.
-3. NetLogo animation, agents, patches and event ingestion.
-4. NYC data selection, observed-demand calibration, experiments and multiple random seeds.
-5. Validation limits, charts, paper/demo; CV/ArcGIS only if time remains.
+- NYC DOT bicycle/pedestrian count snapshots and sensor metadata are accessed with read-only tooling. The [Prospect Park West experiment](nyc_prospect_park_west_calibration.md) used an explicitly selected **raw** count stream to construct a provisional 99 cyclists/hour input.
+- Multiple directional flow records at the same sensor cannot be assumed independent or summed. Device mapping, raw status, time-zone/granularity interpretation and segment correspondence require review.
+- An observed counter volume can support a candidate mean arrival rate. It cannot, without further data, validate modeled cyclist waiting, obstruction durations, lane-changing, collisions or safety improvements.
+- In the NetLogo sensitivity study, *mean queue* is the time-average **count of waiting/pending cyclists**. It is not mean travel delay; peak-queue difference is averaged across matched replicates.
+- Replicate uncertainty quantifies variation **under the simulation's rules**, not the uncertainty of real NYC street predictions.
+- The NetLogo performance study measures **wall-clock computation** on GitHub's runner, not cyclists' simulated waiting time.
+
+## Verification versus validation
+
+- **Verification implemented:** deterministic replay, absence of spontaneous cyclists under zero demand, cyclist conservation, obstruction active during its scheduled interval, paired random-input checks, Python tests, one Java/Python event-time fixture and real NetLogo headless execution.
+- **Validation not established:** independently measured queues, waiting-time trajectories, blocked-lane durations or collision outcomes on the modeled NYC segment.
+
+## Deferred features
+
+The earlier proposal considered Roboflow camera detection, ArcGIS, event-trace interoperability, lane-changing behavior, traffic conflict exposure and real-time digital-twin feedback. These remain **future work**; neither their integration nor the related safety metrics are present in the verified core implementation.
+
+For the final report, use this delivered scope and the [final submission status](final_submission_status.md). Earlier milestone files record the team's evolving ideas and should not be mistaken for claims of completed features.

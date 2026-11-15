@@ -4,9 +4,9 @@
 *CSC 754 — Topics in System Simulation · College of Staten Island*
 
 
-Cyclistics investigates how bicycle-lane obstructions, cyclist arrival intensity, and hypothetical clearance policies influence **simulated** queueing, waiting time, and bottleneck throughput. The long-term architecture combines **DEVSJAVA discrete-event models** with a **NetLogo agent-based cycling model** and selected NYC transportation datasets.
+Cyclistics investigates how bicycle-lane obstructions, cyclist arrival intensity, and hypothetical clearance policies influence **simulated** queueing, waiting time, and bottleneck throughput. The implemented research prototype includes **independently executed** Python discrete-event, Java coupled-DEVS, and NetLogo cyclist-agent models, with NYC bicycle-counter data tools and reproducible experiments.
 
-> **Implementation status (November 2026):** Python DES, a standalone NetLogo cyclist ABM, NYC bicycle-counter ingestion/quality checks, paired experiments, sensitivity analysis, and model-comparison tooling are implemented on the current development branch. The DEVSJAVA atomic and coupled models are now integrated on `feat/final-integration`. Five production Java classes compiled against a local historical DEVS-Suite 2.1 JAR; its real coordinator reproduced the two-cyclist deterministic fixture (departures at 14 s and 24 s). Roboflow and ArcGIS remain optional future work. Simulated queues/delays are not field-validated NYC outcomes.
+> **Current status (November 14, 2026, New York time):** PRs #5–#7 are merged into `main`. Python DES, Java DEVS-Suite atomic/coupled models, standalone NetLogo ABM, NYC bicycle-count input tools, 160-pair NetLogo sensitivity evidence and a real 36-trial GitHub-hosted NetLogo runtime benchmark are implemented. **151 automated Python tests** and all four CI jobs passed on merged `main` (`cef4aa7`). The historical DEVS-Suite 2.1 coordinator reproduced only a two-cyclist fixture (departures at 14 s/24 s); Java and NetLogo are not live-coupled. Real-world NYC queues, delays and crash risks are **not field validated**. Roboflow and ArcGIS remain future work.
 
 ## Example output — synthetic scenarios
 
@@ -36,7 +36,7 @@ Run another synthetic demand level:
 docker compose run --rm simulation python -m cyclistics --rate 450 --seed 754 --output-dir /app/outputs
 ```
 
-**Scope of Docker:** It runs the Python simulation, analysis modules, and source-level tests; it does **not** run the NetLogo desktop GUI or bundle an external DEVS-Suite JAR. The Java model and its test scripts are included in this branch, but require a separately obtained local DEVS-Suite JAR for the real coordinator. See [reproducibility](docs/reproducibility.md) for Linux bind-mount notes.
+**Scope of Docker:** It runs the Python simulation, analysis modules, and source-level tests; it does **not** run the NetLogo desktop GUI or bundle an external DEVS-Suite JAR. The integrated Java model requires a separately obtained compatible DEVS-Suite JAR for its real coordinator. Headless NetLogo is also exercised separately through [GitHub Actions](.github/workflows/netlogo-performance.yml); the Python Docker test image does not run the NetLogo GUI. See [reproducibility](docs/reproducibility.md) for Linux bind-mount notes.
 
 ## Run with Python
 
@@ -84,7 +84,7 @@ The external DEVS-Suite library is **not distributed by this repository**. Place
 
 The coordinator's deterministic fixture uses two arrivals, a scheduled obstruction, and a fixed service headway. The observed departures were **14 s and 24 s**. The Python and Java implementations agreed for that fixture; this is **verification, not field validation**.
 
-The integrated Python suite last reported **139 passing tests** on November 14, 2026. Separate Java adapter tests and GitHub PR checks are release checkpoints, not part of that Python count.
+The merged `main` suite passed **151 Python/source-level tests** on November 14, 2026, with all four CI jobs green ([GitHub run](https://github.com/rainrunner20/Cyclistics-CSC-754-Final-Project/actions/runs/43667009570)). The external Java coordinator and actual NetLogo headless engine have separate verification evidence; they are **not** exercised by the Python-only test count.
 
 [Final integration verification](docs/final_integration_verification.md) · [External DEVSJAVA setup](docs/devsjava_runtime_check.md)
 
@@ -100,15 +100,21 @@ A controlled regression of the pre-visual and enhanced versions used **600 cycli
 
 The NetLogo sensitivity study uses **4 demand rates × 4 obstruction durations × 10 random seeds** (160 paired records). The research exporter validates a **real NetLogo CSV**, then produces a 16-row paper table, two queue-response SVG figures, and an evidence manifest with SHA-256 provenance. The program does **not** generate or invent experimental observations.
 
-Run the NetLogo **Run sensitivity study** procedure first to create the ignored `outputs/netlogo_sensitivity_raw.csv` file. Then, from the repository root:
+A completed local NetLogo study produced **160 validated paired records**; the [findings report](docs/research_sensitivity_findings.md) records all 16 averages and approximate t intervals. To reproduce them from your **original local** `outputs/netlogo_sensitivity_raw.csv` (not committed), run:
 
 ```powershell
 docker compose run --build --rm simulation python -m cyclistics.research_evidence --input /app/outputs/netlogo_sensitivity_raw.csv --model /app/netlogo/Cyclistics_Bike_Lane_ABM.nlogo --output-dir /app/outputs/research_evidence
 ```
 
-Only summarize the resulting numbers once the raw export has passed validation. The paired 95% intervals quantify variation among **simulated** replicates, not measured NYC delays or statistical agreement with the Java DEVS model.
+The paired 95% intervals quantify variation among **simulated** replicates, not measured NYC delays or statistical agreement with the Java DEVS model. The largest tested mean-queue effect, at 900 cyclists/hour and a 120-second obstruction, was **+3.369 waiting cyclists** (individual approximate 95% t interval **2.940–3.798**); it is a difference in *mean waiting counts*, not extra travel-time seconds.
 
 [Milestone 3.8 research design](docs/research_evidence_plan.md) · [Copy-paste reproduction guide](docs/research_evidence_howto.md) · [Recorded sensitivity findings and uncertainty](docs/research_sensitivity_findings.md)
+
+## Measured NetLogo runtime evidence (3.8B)
+
+The separate GitHub Actions [headless NetLogo workflow](.github/workflows/netlogo-performance.yml) executes the **real NetLogo 6.3.0 model** on a Linux runner, validating five verification scenarios and measuring **36 runtime trials** (3 demand levels × 2 obstruction states × 2 horizons × 3 seeds). The performance exporter creates 12 summary rows, two SVG graphs and a SHA-256 manifest. The reported runtimes are **wall-clock computation times on GitHub's runner**, not NYC cyclist waiting times or a DEVSJAVA-versus-NetLogo speed comparison.
+
+[Measured runtime results and environment](docs/performance_evidence_results.md) · [Reproduction guide](docs/performance_evidence_howto.md) · [Headless GitHub workflow](.github/workflows/netlogo-performance.yml)
 
 ## Baseline experiments
 
@@ -141,11 +147,11 @@ cyclistics/
 
 ## Course relevance
 
-Cyclistics demonstrates event-list scheduling and FIFO queues (Python DES), DEVS atomic/coupled models and a coordinator-driven clock (integrated Java source), NetLogo ABM with spatial patches, reproducible paired experiments, and verification versus real-world validation. The [roadmap](docs/roadmap.md) contains earlier planning context; milestone results and current branch state are more authoritative.
+Cyclistics demonstrates event-list scheduling and FIFO queues (Python DES), DEVS atomic/coupled models and a coordinator-driven clock (integrated Java source), NetLogo ABM with spatial patches, reproducible paired experiments, and verification versus real-world validation. The [roadmap](docs/roadmap.md) and [submission evidence ledger](docs/final_submission_status.md) distinguish completed features from future extensions.
 
 ## Documentation
 
-[Architecture](docs/architecture.md) · [Project scope](docs/project_scope.md) · [Reproducibility](docs/reproducibility.md) · [GitHub publishing](docs/github_setup.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
+[Current architecture](docs/architecture.md) · [Project scope](docs/project_scope.md) · [Final status and evidence](docs/final_submission_status.md) · [Paper/presentation blueprint](docs/final_report_presentation_plan.md) · [Reproducibility](docs/reproducibility.md) · [GitHub publishing](docs/github_setup.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
 ## License
 

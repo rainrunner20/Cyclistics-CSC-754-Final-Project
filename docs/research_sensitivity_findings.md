@@ -1,6 +1,6 @@
 # Milestone 3.8A — NetLogo sensitivity findings (reported local run)
 
-**Status:** Validated 160-row NetLogo sensitivity export and reported research summary. The original raw CSV and generated SVG files remain local and have not been independently inspected in this repository. These are simulation results, **not** observed NYC traffic outcomes.
+**Status:** Validated 160-row NetLogo sensitivity export and fully recorded research summary. The original raw CSV and generated files remain on the researcher's computer, but a Windows SHA-256 audit matched all eight manifest entries, and both uploaded SVGs were reviewed for readability and independently matched their recorded SHA-256 hashes. These are **simulated** results, not observed NYC traffic outcomes.
 
 ## Reproduction and verification — November 14, 2026
 
@@ -10,8 +10,8 @@ A submitted Windows PowerShell transcript from `feat/research-evidence` showed:
 - `outputs/netlogo_sensitivity_raw.csv` existed with **160 paired rows**.
 - `python -m cyclistics.research_evidence` reported **PASS: validated 160 paired NetLogo rows** and **PASS: generated 16 research table rows**.
 - `paper_sensitivity_table.csv` exposed per-configuration means and the lower and upper bounds of approximate 95% paired-difference t intervals.
-- `evidence_manifest.json` reported source and result SHA-256 values. These hashes are **recorded from the user's generated manifest**, not independently recomputed from the local CSV bytes by this report.
-- The two SVG result files were opened locally but their visual presentation has **not** yet been inspected here.
+- `evidence_manifest.json` recorded source and result SHA-256 values. The user ran `Get-FileHash -Algorithm SHA256` on all eight local model/source/output files and reported **8/8 matches**. The raw CSV itself was not uploaded for independent byte-level inspection.
+- Both uploaded SVG files were subsequently **reviewed** for titles, axis units, legends, t-based error bars and clipping. The two uploaded file digests independently matched the manifest; the current graphical outputs are suitable as synthetic simulation figures.
 
 ## Experiment design
 
@@ -81,6 +81,6 @@ The user's manifest also records hashes for the Python evidence builder and sens
 
 > Effect of simulated bicycle-lane obstructions on mean waiting queue in NetLogo (4 demand levels × 4 durations; 10 paired seeds per configuration). Error bars represent approximate 95% t intervals of blocked-minus-clear differences; results are synthetic, not observed NYC outcomes.
 
-Before treating either chart as a final figure, visually inspect labels, interval bars, scaling and readability, and independently check local source/output hashes against the reported manifest. Generated data and plots remain Git-ignored under `outputs/`.
+**Figure review completed:** labels, interval bars, scaling and legibility were inspected, and all eight local hashes matched their manifest according to the user's PowerShell output. Generated data and plots remain Git-ignored under `outputs/`. These figures are suitable for the paper **with** clear model-simulation captions and without any claims of NYC field validation.
 
 **CSC 754 defense:** ABM represents individual cyclists and emergent queues; replicated paired trials are controlled simulation experiments; per-tick conservation and negative controls provide *verification*, not external *validation*. The DEVS model uses an event-driven coordinator rather than NetLogo's global ticks.

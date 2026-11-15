@@ -21,11 +21,12 @@ From your Cyclistics repository root, ensure the current worktree is clean befor
 git branch --show-current
 git status
 git fetch origin
-git switch --track -c feat/performance-evidence origin/feat/performance-evidence
+git switch main
+git pull --ff-only origin main
 git status
 ```
 
-This branch starts from the last released `main` while sensitivity-results PR #6 remains separate. **Do not delete PR #6 or any existing feature branch.**
+PRs #6 and #7 are merged into `main`. You can reproduce the runtime results from `main` without creating a new feature branch. **Do not delete any existing feature branch.**
 
 ## Step 2 — Run code tests
 
@@ -33,7 +34,7 @@ This branch starts from the last released `main` while sensitivity-results PR #6
 docker compose run --build --rm tests
 ```
 
-The released `main` had 139 tests. This performance branch adds six unit tests (145 total). The new test fixtures **are invented solely to test software arithmetic and rejection rules**; never put their numbers in a course report.
+The merged `main` currently has **151 tests**, including six performance-evidence unit tests. Test fixtures are **synthetic software inputs only**; their timing numbers must never appear as measured research results.
 
 ## Step 3 — Check whether desktop NetLogo already exported the measurements
 

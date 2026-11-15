@@ -40,17 +40,19 @@ run and understand the code; keep mistakes and changes of direction when relevan
 
 ---
 
-## Current milestone: NYC Open Data ingestion
+## Reflection prompt: final verification and paper preparation
 
-_Fill in these blanks after running the code yourself. Don't present placeholders as completed work._
+_These are prompts for your own reflection, **not completed personal activity or evidence**. Only fill them out after reviewing the code or performing an actual run._
 
-- Goal: Inspect NYC DOT bicycle-count and sensor data through a read-only API.
-- I ran: `____________________________`
-- My actual result: `____________________________`
-- I looked at the `build_url`, `fetch_sample`, and `validate_records` functions and learned: `____________________________`
-- One test I can explain: `____________________________`
-- Something I changed, questioned, or would improve: `____________________________`
-- Remaining limitation: The sample is not yet filtered/calibrated to one bicycle sensor.
+- Task I personally reviewed: `____________________________`
+- File, function or model behavior I can now explain: `____________________________`
+- Command I actually ran (if any): `____________________________`
+- Actual result I saw, with time or screenshot if useful: `____________________________`
+- One counterexample / limitation I understand: `____________________________`
+- One CSC 754 connection (event scheduler, atomic DEVS, ABM, experimental design or verification): `____________________________`
+- One improvement I would investigate next: `____________________________`
+
+For already recorded team/repository evidence, cite [the submission status ledger](final_submission_status.md). The ledger documents commits, tests and model runs; it does **not** imply that you manually typed every line or personally ran each cloud job.
 
 ## Evidence to keep
 
