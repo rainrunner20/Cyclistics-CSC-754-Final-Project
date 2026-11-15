@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Cyclistics | DES Event Inspector & Policy Lab</title>
+  <link rel="stylesheet" href="./lab.css">
+  <script type="module" src="./lab.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./index.html" aria-label="Cyclistics map dashboard">🚴 Cyclistics</a>
+    <div class="top-title">
+      <span class="eyebrow">Modeling & simulation / research tools</span>
+      <h1>Event Inspector <span>+ Policy Lab</span></h1>
+    </div>
+    <span class="pill">Python DES · synthetic</span>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">Follow the model, not a scripted animation</p>
+        <h2>Every transition comes from your simulation trace.</h2>
+        <p>Run the Python exporter, import its JSON, then step through individual arrivals,
+          obstruction events and service completions. Compare equal-demand scenarios below.</p>
+      </div>
+      <label class="file-picker" for="trace-file">
+        <span>Import visual_lab.json</span>
+        <input id="trace-file" type="file" accept=".json,application/json" aria-label="Import Python DES trace JSON">
+      </label>
+    </section>
+
+    <div id="status" class="status-line" role="status">No trace loaded. Run the export command in the guide below, then select the output JSON.</div>
+    <section class="workspace">
+      <aside class="panel">
+        <h3>Scenario controls</h3>
+        <label class="field" for="scenario">Policy</label>
+        <select id="scenario" disabled><option>Import a trace first</option></select>
+        <div class="metric-grid">
+          <div class="metric"><span>Mean wait</span><strong id="mean-wait">—</strong></div>
+          <div class="metric"><span>Peak queue</span><strong id="peak-queue">—</strong></div>
+          <div class="metric"><span>Departed</span><strong id="departed">—</strong></div>
+          <div class="metric"><span>Arrivals</span><strong id="arrivals">—</strong></div>
+        </div>
+
+        <h3>Playback</h3>
+        <div class="transport" aria-label="Playback controls">
+          <button id="reset" disabled title="Reset to first event" aria-label="Reset">↺</button>
+          <button id="previous" disabled title="Previous event" aria-label="Previous event">←</button>
+          <button id="play" disabled class="primary">▶ Play</button>
+          <button id="next" disabled title="Next event" aria-label="Next event">→</button>
+        </div>
+        <label class="field" for="position">Event <output id="position-label">0 / 0</output></label>
+        <input id="position" type="range" min="0" max="0" value="0" disabled>
+        <label class="field" for="speed">Playback speed</label>
+        <select id="speed"><option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select>
+
+        <div class="assumptions">
+          <strong>Scientific boundary</strong>
+          <p>This is a deterministic replay of the <em>Python discrete-event reference</em>,
+            not a live NetLogo animation or a DEVSJAVA coordinator. The scenarios use synthetic
+            arrivals and are not validated against NYC queue observations.</p>
+        </div>
+      </aside>
+
+      <section class="viewer">
+        <div class="section-heading">
+          <div><span class="eyebrow">Event-level state inspection</span><h3>What's happening inside the bottleneck?</h3></div>
+          <span id="clock" class="clock">t = —</span>
+        </div>
+        <div class="event-hero">
+          <div>
+            <span id="event-type" class="event-type">Import a trace to begin</span>
+            <p id="event-description">The event queue determines the next transition; each row captures the state <em>after</em> that event.</p>
+          </div>
+          <div class="phase">
+            <span>Model phase</span>
+            <strong id="phase">—</strong>
+          </div>
+        </div>
+        <div class="state-strip" aria-label="State after event">
+          <div><span>Waiting cyclists</span><strong id="queue">—</strong></div>
+          <div><span>Service active</span><strong id="busy">—</strong></div>
+          <div><span>Lane blocked</span><strong id="blocked">—</strong></div>
+          <div><span>Conservation</span><strong id="conservation">—</strong></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-heading">
+            <div><h3>Queue evolution</h3><p>Recorded queue after each event, in simulated time</p></div>
+            <span class="legend-item">● Current event</span>
+          </div>
+          <svg id="queue-chart" viewBox="0 0 720 180" role="img" aria-label="Event trace queue over time"></svg>
+        </div>
+        <div class="log-card">
+          <h3>Event log <small>click a row to inspect it</small></h3>
+          <div id="event-log" class="log" aria-live="polite"><p class="empty">No event trace yet.</p></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="comparison">
+      <div class="section-heading">
+        <div><span class="eyebrow">Controlled experiment / paired inputs</span><h2>What changes when a truck clears sooner?</h2></div>
+        <span id="pairing" class="micro">Awaiting simulation data</span>
+      </div>
+      <div id="policy-bars" class="policy-bars"><p class="empty">Import a generated trace to compare the three scenarios.</p></div>
+      <div class="comparison-footer">
+        <p>All policies share the same arrival times and random seed. Metrics are computed by the Python model, not estimated in the browser.
+          Different NetLogo or Java models should not be assumed numerically equivalent.</p>
+      </div>
+    </section>
+
+    <section class="guide">
+      <h2>Get your actual trace in VS Code</h2>
+      <p>From the repository root, run this in PowerShell. The JSON goes in your ignored <code>outputs/</code> folder, not into Git history.</p>
+      <pre><code>python -m pip install -e .
+python -m cyclistics.visual_lab --rate 900 --seed 754 --horizon 300 --blockage-start 45 --blockage-duration 120 --early-clearance-duration 30 --output outputs/visual_lab.json
+python -m http.server 8000 --directory web</code></pre>
+      <p>Then open <code>http://localhost:8000/lab.html</code> and import <code>outputs/visual_lab.json</code>.</p>
+    </section>
+  </main>
+  <footer>Research prototype · Single FIFO bottleneck · No live camera feed, crash prediction, or field validation · <a href="./index.html">NYC map viewer</a></footer>
+</body>
+</html>
