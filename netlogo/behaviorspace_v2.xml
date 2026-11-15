@@ -68,4 +68,36 @@ load-v2-event-replay "fixtures/v2_synthetic_obstruction.csv"</setup>
       <value value="600"/>
     </enumeratedValueSet>
   </experiment>
+
+  <experiment name="cyclistics-v2-export" repetitions="1" runMetricsEveryStep="false">
+    <setup>run-v2-experiment</setup>
+    <go>stop</go>
+    <timeLimit steps="1"/>
+    <metric>conservation-ok?</metric>
+    <metric>lane-spacing-ok?</metric>
+    <enumeratedValueSet variable="arrival-rate-per-hour">
+      <value value="900"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="car-rate-per-hour">
+      <value value="600"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blockage-enabled">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="merging-enabled">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blockage-start">
+      <value value="45"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blockage-duration">
+      <value value="120"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="seed-value">
+      <value value="754"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="run-length">
+      <value value="300"/>
+    </enumeratedValueSet>
+  </experiment>
 </experiments>
