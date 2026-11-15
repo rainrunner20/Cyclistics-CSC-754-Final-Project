@@ -1,0 +1,78 @@
+name: V2 trajectory conflict evidence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/v2-conflicts.yml'
+      - 'src/cyclistics/v2_conflicts.py'
+      - 'tests/test_v2_conflicts.py'
+      - 'netlogo/Cyclistics_Mixed_Traffic_v2.nlogo'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conflict-evidence:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install NetLogo 6.3.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/netlogo"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/netlogo-6.3.0.tgz" \
+            "https://downloads.netlogo.org/6.3.0/NetLogo-6.3.0-64.tgz"
+          tar -xzf "$RUNNER_TEMP/netlogo-6.3.0.tgz" -C "$RUNNER_TEMP/netlogo"
+          headless="$(find "$RUNNER_TEMP/netlogo" -name netlogo-headless.sh -type f -print -quit)"
+          test -n "$headless"
+          chmod +x "$headless"
+          echo "NETLOGO_HEADLESS=$headless" >> "$GITHUB_ENV"
+
+      - name: Produce real NetLogo v2 trajectories
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p outputs
+          cd netlogo
+          "$NETLOGO_HEADLESS" \
+            --model "$GITHUB_WORKSPACE/netlogo/Cyclistics_Mixed_Traffic_v2.nlogo" \
+            --setup-file "$GITHUB_WORKSPACE/netlogo/behaviorspace_v2.xml" \
+            --experiment cyclistics-v2-export \
+            --table "$GITHUB_WORKSPACE/outputs/v2_export_behaviorspace.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/v2_trajectories.csv"
+
+      - name: Analyze real trajectory CSV and report provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=src python -m cyclistics.v2_conflicts \
+            --input outputs/v2_trajectories.csv \
+            --outdir outputs/v2_conflicts
+          cat outputs/v2_conflicts/summary.json
+          cat outputs/v2_conflicts/conflict_manifest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("outputs/v2_conflicts/summary.json").read_text())
+          assert data["trajectory_rows"] > 0
+          assert data["modeled_agents"] > 0
+          assert data["field_validated"] is False
+          assert data["crash_probability_estimated"] is False
+          print("PASS: analyzed actual headless v2 trajectories without collision-risk claims")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cyclistics-v2-conflict-proxy-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            outputs/v2_trajectories.csv
+            outputs/v2_metrics.csv
+            outputs/v2_conflicts/
