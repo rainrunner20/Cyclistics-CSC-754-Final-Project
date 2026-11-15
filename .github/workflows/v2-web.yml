@@ -1,0 +1,34 @@
+name: V2 ArcGIS viewer smoke
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/v2-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: JavaScript syntax
+        run: node --check web/dashboard.js
+      - name: Confirm HTML and source paths
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          page = Path('web/index.html').read_text(encoding='utf-8')
+          js = Path('web/dashboard.js').read_text(encoding='utf-8')
+          for path in ('./dashboard.js', './styles.css'):
+              assert path in page
+              assert Path('web', path).is_file()
+          assert 'https://js.arcgis.com/5.1/' in page
+          assert 'GeoJSONLayer' in js
+          assert 'viewOnReady' in js
+          assert 'not field validated' in page
+          print('PASS: static viewer wiring and disclaimers')
+          PY
