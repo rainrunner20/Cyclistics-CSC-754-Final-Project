@@ -59,6 +59,7 @@ jobs:
           test -s "$GITHUB_WORKSPACE/outputs/v2_export_behaviorspace.csv"
           test -s "$GITHUB_WORKSPACE/outputs/v2_trajectories.csv"
           test -s "$GITHUB_WORKSPACE/outputs/v2_metrics.csv"
+          cd "$GITHUB_WORKSPACE"
           python - <<'PY'
           import csv
           from pathlib import Path
