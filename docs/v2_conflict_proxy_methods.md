@@ -26,6 +26,23 @@ These indicators are intentionally distinct from collision counts and from the v
 - summary.json: row and distinct-agent counts, thresholds, minimum defined TTC and crossing gap, events beneath the thresholds, transparent units and scientific caveats.
 - conflict_manifest.json: SHA-256 of the original trajectory CSV and of the summary file; `field_validated` remains false.
 
+## Real model execution evidence (synthetic traffic, not real observations)
+
+[GitHub Actions run 43671124239](https://github.com/rainrunner20/Cyclistics-CSC-754-Final-Project/actions/runs/43671124239) executed the actual NetLogo 6.3.0 experimental model and analyzed its exported trajectory CSV, rather than calling the analyzer with unit-test fixtures. The source artifact is [v2 conflict proxy evidence](https://github.com/rainrunner20/Cyclistics-CSC-754-Final-Project/actions/runs/43671124239/artifacts/14144018478).
+
+| Derived statistic | Measured in the synthetic v2 run |
+| --- | ---: |
+| CSV trajectory rows | 6,217 |
+| Distinct simulated agents observed | 155 |
+| TTC-like closing-gap snapshots under 3 s | 17 |
+| Smallest modeled TTC-like value | 0.805 simulated s |
+| Same-x passage gaps under 2 s | 4 |
+| Minimum modeled same-x passage gap | 1.534 simulated s |
+
+The experiment settings are a 300-tick horizon, attempted 900 cyclists/hour and 600 cars/hour, seed 754, a 120-s blockage beginning t=45, and cyclist merging enabled. **All values describe this one invented traffic model and this single seed, not observed NYC behavior.** The resulting conflict counts are *snapshot / passage-pair counts*, not distinct crashes or validated near misses. A different model calibration, threshold, movement policy or seed can change the totals.
+
+Provenance: the GitHub manifest records input trajectory SHA-256 **44c703f4502213bb6979658459c8d7d180fb05c6217c861ef95ee5b9a8a7f50e** and summary JSON SHA-256 **4887cd80bdd1f934bc9005c453325fdfbe2cc35f391d3ae1c766530d5b3e1e1e**. These are GitHub-run-derived digests; retain the original artifact because run downloads expire.
+
 ## CSC 754 defense
 
 The metrics demonstrate how model **state variables and agent motion** can produce secondary outcomes from trajectories; they are not DEVS event-count verification or real-world safety validation. The original v1 experiments remain the primary course evidence. An empirical traffic-safety study would need source geometry in meters, measured trajectories/velocities, ground-truth conflict labels and sensitivity to threshold definitions.
