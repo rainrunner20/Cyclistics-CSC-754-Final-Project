@@ -51,6 +51,14 @@ jobs:
             --experiment cyclistics-v2-replay \
             --table "$GITHUB_WORKSPACE/outputs/v2_replay_behaviorspace.csv"
           test -s "$GITHUB_WORKSPACE/outputs/v2_replay_behaviorspace.csv"
+          "$NETLOGO_HEADLESS" \
+            --model "$GITHUB_WORKSPACE/netlogo/Cyclistics_Mixed_Traffic_v2.nlogo" \
+            --setup-file "$GITHUB_WORKSPACE/netlogo/behaviorspace_v2.xml" \
+            --experiment cyclistics-v2-export \
+            --table "$GITHUB_WORKSPACE/outputs/v2_export_behaviorspace.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/v2_export_behaviorspace.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/v2_trajectories.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/v2_metrics.csv"
           python - <<'PY'
           import csv
           from pathlib import Path
@@ -69,7 +77,17 @@ jobs:
           assert replay[0]["conservation-ok?"] == "true"
           assert replay[0]["lane-spacing-ok?"] == "true"
           assert int(replay[0]["observed-blocked-ticks"]) == 8, replay
-          print("PASS: two mixed-traffic conditions, conservation, spacing, and 8 replayed block ticks")
+          with Path("outputs/v2_trajectories.csv").open(encoding="utf-8", newline="") as f:
+              from csv import DictReader
+              traces = list(DictReader(f))
+          with Path("outputs/v2_metrics.csv").open(encoding="utf-8", newline="") as f:
+              metrics = list(DictReader(f))
+          assert traces and metrics and len(metrics) == 1
+          assert {r["type"] for r in traces} == {"car", "cyclist"}
+          assert {float(r["lane_y"]) for r in traces}.issubset({0.0, 2.0})
+          assert metrics[0]["conservation_ok"] == "true"
+          assert float(metrics[0]["merges"]) > 0
+          print("PASS: mixed traffic, replay ticks, trajectories, and model-metrics CSV")
           PY
 
       - name: Save actual experimental model output
@@ -81,3 +99,6 @@ jobs:
           path: |
             outputs/v2_behaviorspace.csv
             outputs/v2_replay_behaviorspace.csv
+            outputs/v2_export_behaviorspace.csv
+            outputs/v2_trajectories.csv
+            outputs/v2_metrics.csv
