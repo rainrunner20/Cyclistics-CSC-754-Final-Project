@@ -28,6 +28,14 @@ public final class ObstructionScheduleTests {
     }
 
     public static void main(String[] args) throws Exception {
+        if (args.length == 1) {
+            double[][] imported = ObstructionSchedule.readCsv(Path.of(args[0]));
+            if (imported.length != 1 || imported[0][0] != 12 || imported[0][1] != 20) {
+                throw new AssertionError("Python bridge CSV did not preserve expected 12–20 s window");
+            }
+            System.out.println("PASS: real Python-generated event CSV parsed by Java");
+            return;
+        }
         String header = "time_s,event_type\n";
         double[][] windows = parse(header
                 + "12,obstruction_start\n20,obstruction_end\n"
