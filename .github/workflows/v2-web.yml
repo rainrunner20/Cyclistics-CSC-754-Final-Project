@@ -16,7 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: JavaScript syntax
-        run: node --check web/dashboard.js
+        run: |
+          node --check web/dashboard.js
+          node --check web/lab.js
       - name: Confirm HTML and source paths
         run: |
           python - <<'PY'
@@ -30,5 +32,13 @@ jobs:
           assert 'GeoJSONLayer' in js
           assert 'viewOnReady' in js
           assert 'not field validated' in page
-          print('PASS: static viewer wiring and disclaimers')
+          lab = Path('web/lab.html').read_text(encoding='utf-8')
+          lab_js = Path('web/lab.js').read_text(encoding='utf-8')
+          assert './lab.js' in lab and './lab.css' in lab
+          assert Path('web/lab.css').is_file()
+          assert './lab.html' in page
+          assert 'Python DES' in lab and 'synthetic' in lab
+          assert 'cyclistics.visual_lab.v1' in lab_js
+          assert 'python -m cyclistics.visual_lab' in lab
+          print('PASS: both static viewers are wired and provenance-labeled')
           PY
