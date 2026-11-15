@@ -1,0 +1,56 @@
+name: Experimental v2 NetLogo mixed-traffic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/netlogo-v2.yml'
+      - 'netlogo/Cyclistics_Mixed_Traffic_v2.nlogo'
+      - 'netlogo/Cyclistics_Mixed_Traffic_v2.nls'
+      - 'netlogo/behaviorspace_v2.xml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mixed-traffic:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install official NetLogo 6.3.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/netlogo"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/netlogo-6.3.0.tgz" \
+            "https://downloads.netlogo.org/6.3.0/NetLogo-6.3.0-64.tgz"
+          tar -xzf "$RUNNER_TEMP/netlogo-6.3.0.tgz" -C "$RUNNER_TEMP/netlogo"
+          headless="$(find "$RUNNER_TEMP/netlogo" -type f -name netlogo-headless.sh -print -quit)"
+          test -n "$headless"
+          chmod +x "$headless"
+          echo "NETLOGO_HEADLESS=$headless" >> "$GITHUB_ENV"
+
+      - name: Run real mixed-traffic simulations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p outputs
+          cd netlogo
+          "$NETLOGO_HEADLESS" \
+            --model "$GITHUB_WORKSPACE/netlogo/Cyclistics_Mixed_Traffic_v2.nlogo" \
+            --setup-file "$GITHUB_WORKSPACE/netlogo/behaviorspace_v2.xml" \
+            --experiment cyclistics-v2-mixed \
+            --table "$GITHUB_WORKSPACE/outputs/v2_behaviorspace.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/v2_behaviorspace.csv"
+          echo 'Headless mixed-traffic output:'
+          tail -n 8 "$GITHUB_WORKSPACE/outputs/v2_behaviorspace.csv"
+          grep -q "true" "$GITHUB_WORKSPACE/outputs/v2_behaviorspace.csv"
+
+      - name: Save actual experimental model output
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclistics-v2-headless-mixed-traffic
+          retention-days: 30
+          if-no-files-found: error
+          path: outputs/v2_behaviorspace.csv
