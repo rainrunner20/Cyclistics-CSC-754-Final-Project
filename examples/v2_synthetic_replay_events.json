@@ -1,0 +1,22 @@
+[
+  {
+    "schema": "cyclistics.simulation-event.v1",
+    "event_id": "synthetic-01:start",
+    "scenario_id": "synthetic-fixture-v2",
+    "source": "synthetic_fixture",
+    "source_observation_id": null,
+    "simulated_time_s": 12,
+    "event_type": "obstruction_start",
+    "segment_id": "model-segment"
+  },
+  {
+    "schema": "cyclistics.simulation-event.v1",
+    "event_id": "synthetic-01:end",
+    "scenario_id": "synthetic-fixture-v2",
+    "source": "synthetic_fixture",
+    "source_observation_id": null,
+    "simulated_time_s": 20,
+    "event_type": "obstruction_end",
+    "segment_id": "model-segment"
+  }
+]
