@@ -12,8 +12,20 @@
 | 5 | NYC count ingestion, stream quality and candidate rate | **Implemented**, but real count stream remains provisional and unverified |
 | 6A | Paired NetLogo sensitivity study and paper figures | **Complete**; 160 paired rows, 16 summaries, 95% within-model intervals ([findings](research_sensitivity_findings.md)) |
 | 6B | NetLogo computational performance evidence | **Complete**; 36 measured GitHub-hosted trials, 12 summaries ([performance](performance_evidence_results.md)) |
-| 7 | Roboflow, live CV, ArcGIS, co-simulation and lane changes | **Deferred / future work**, not implemented |
+| 7 | Advanced CV, ArcGIS, co-simulation, motor traffic, cyclist lane changes and surrogate safety | **Approved experimental v2 backlog**; design and observation-contract foundation only, **not** a functioning integrated extension |
 | 8 | Final individual paper, presentation and packaged evidence | **In preparation**; [final report blueprint](final_report_presentation_plan.md) |
+
+## Experimental v2 roadmap (separate from verified v1)
+
+The user chose to pursue **all five** advanced extensions after the initial CSC 754 core was completed. They are tracked in [the advanced extensions plan](advanced_extensions_plan.md) and [ADR 0003](decisions/0003-protect-v1-while-extending.md). Start with an observation contract and regression tests; then build and test each of the following as independent deliverables:
+
+1. Optional Roboflow computer-vision inference with an actual image/video and reviewed lane-overlap decision.
+2. An ArcGIS scenario map using grounded NYC geometry and labeled synthetic simulation results.
+3. Python/DEVS-Suite/NetLogo deterministic event replay, followed by true live orchestration only if clocks and message delivery are verified.
+4. A separately named mixed-traffic NetLogo model containing a motor-vehicle lane, seeded car agents and traffic interaction logic.
+5. Realistic-for-the-model cyclist lane-choice rules and computed conflict proxies (e.g. TTC/PET), **not** unvalidated crash probability.
+
+The experimental work must not overwrite the 160-pair v1 sensitivity measurements or source digests, and **does not replace completion of the individual paper and presentation**.
 
 ## Remaining submission checklist
 
