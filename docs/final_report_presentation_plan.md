@@ -2,6 +2,8 @@
 
 **Purpose:** Convert the implemented repository into a clear, reproducible academic submission. This is an **outline and drafting guide**, not a claim that the final paper/slides or external bibliography have already been completed.
 
+**Scientific version boundary:** The results and figures in this plan belong to verified **v1**. The separately implemented [v2 experimental extensions](v2_extension_release_status.md) (motor traffic, merging, TTC-style proxies, offline replay, optional vision and ArcGIS) may be added as a clearly labeled prototype demonstration or future research section, but **must not** be mixed into the v1 160-pair confidence intervals, imply real NYC crashes, or be described as live coupled simulation.
+
 **Suggested paper target:** 10–12 pages, subject to Dr. Gu's latest instructions (do not exceed his stated maximum of 20 without permission). The sample page allocation below totals approximately **11 pages including figures and references**; adjust to the required formatting.
 
 ## One-sentence project pitch (ELI5)
