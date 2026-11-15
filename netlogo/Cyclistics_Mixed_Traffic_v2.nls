@@ -17,7 +17,7 @@ globals [
   cars-requested cars-pending cars-departed cars-admitted
   car-arrival-draws car-speed-draws
   obstruction-active? replay-rows
-  queue-now max-queue queue-area
+  queue-now max-queue queue-area observed-blocked-ticks
   merge-events return-events potential-conflict-ticks minimum-ttc-s
   trajectory-rows
 ]
@@ -80,6 +80,7 @@ to setup
   set queue-now 0
   set max-queue 0
   set queue-area 0
+  set observed-blocked-ticks 0
   set merge-events 0
   set return-events 0
   set potential-conflict-ticks 0
@@ -92,6 +93,7 @@ end
 to go
   if ticks >= run-length [ stop ]
   update-obstruction
+  if obstruction-active? [ set observed-blocked-ticks observed-blocked-ticks + 1 ]
   request-cyclist
   request-car
   admit-cyclist
@@ -111,6 +113,7 @@ to go
   tick
   record-trajectories
   if not conservation-ok? [ error "V2 cyclist/car conservation failed" ]
+  if not lane-spacing-ok? [ error "V2 lane spacing violation" ]
 end
 
 to update-obstruction
@@ -314,6 +317,26 @@ to record-trajectories
         driving-speed false) trajectory-rows)
     ]
   ]
+end
+
+to-report lane-spacing-ok?
+  ;; Check both physical lanes after every tick. Distinct car/cyclist agent
+  ;; types use the same longitudinal clearance invariant within a lane.
+  foreach [0 2] [ road-lane ->
+    let traffic (sort-on [xcor] (turtle-set
+      (cars with [ycor = road-lane])
+      (cyclists with [ycor = road-lane])))
+    if (length traffic) > 1 [
+      let previous first traffic
+      foreach (but-first traffic) [ current ->
+        if ([xcor] of current - [xcor] of previous) < 0.75 [
+          report false
+        ]
+        set previous current
+      ]
+    ]
+  ]
+  report true
 end
 
 to-report conservation-ok?
