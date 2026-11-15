@@ -1,0 +1,36 @@
+name: V2 Java schedule parser
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/v2-java-replay.yml'
+      - 'devsjava/src/main/java/org/cyclistics/devs/ObstructionSchedule.java'
+      - 'devsjava/src/main/java/org/cyclistics/devs/CyclisticsReplayRunner.java'
+      - 'devsjava/test_support/src/org/cyclistics/devs/ObstructionScheduleTests.java'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schedule-parser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile independent schedule parser
+        run: |
+          set -euo pipefail
+          mkdir -p outputs/java-parser-classes
+          javac --release 17 -d outputs/java-parser-classes \
+            devsjava/src/main/java/org/cyclistics/devs/ObstructionSchedule.java \
+            devsjava/test_support/src/org/cyclistics/devs/ObstructionScheduleTests.java
+          java -ea -cp outputs/java-parser-classes org.cyclistics.devs.ObstructionScheduleTests
+      - name: Explain real DEVS-Suite dependency boundary
+        run: |
+          echo 'The optional full coupled runner requires the external historical DEVS-Suite JAR.'
+          echo 'This job compiles only the Java CSV parser and its pure Java tests.'
+          echo 'A passing parser is NOT evidence of the external DEVS-Suite coordinator running.'
