@@ -1,0 +1,116 @@
+name: V2 offline integration demonstration
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/v2-end-to-end.yml'
+      - 'src/cyclistics/v2_demo.py'
+      - 'tests/test_v2_demo.py'
+      - 'devsjava/test_support/src/org/cyclistics/devs/ObstructionScheduleTests.java'
+      - 'netlogo/behaviorspace_v2_demo.xml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verified-offline-demo:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Create explicit synthetic, approved observation events in Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=src python -m cyclistics.v2_demo \
+            --input examples/v2_synthetic_reviewed_observation.json \
+            --approve-synthetic \
+            --outdir outputs/v2_demo
+          cat outputs/v2_demo/netlogo_obstruction_events.csv
+
+      - name: Compile Java event reader and parse the actual Python output
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p outputs/java-parser-classes
+          javac --release 17 -d outputs/java-parser-classes \
+            devsjava/src/main/java/org/cyclistics/devs/ObstructionSchedule.java \
+            devsjava/test_support/src/org/cyclistics/devs/ObstructionScheduleTests.java
+          java -ea -cp outputs/java-parser-classes org.cyclistics.devs.ObstructionScheduleTests \
+            outputs/v2_demo/netlogo_obstruction_events.csv
+
+      - name: Install genuine NetLogo 6.3.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/netlogo"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/netlogo-6.3.0.tgz" \
+            "https://downloads.netlogo.org/6.3.0/NetLogo-6.3.0-64.tgz"
+          tar -xzf "$RUNNER_TEMP/netlogo-6.3.0.tgz" -C "$RUNNER_TEMP/netlogo"
+          headless="$(find "$RUNNER_TEMP/netlogo" -type f -name netlogo-headless.sh -print -quit)"
+          test -n "$headless"
+          chmod +x "$headless"
+          echo "NETLOGO_HEADLESS=$headless" >> "$GITHUB_ENV"
+
+      - name: Run the replay in actual NetLogo and export simulated trajectories
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd netlogo
+          "$NETLOGO_HEADLESS" \
+            --model "$GITHUB_WORKSPACE/netlogo/Cyclistics_Mixed_Traffic_v2.nlogo" \
+            --setup-file "$GITHUB_WORKSPACE/netlogo/behaviorspace_v2_demo.xml" \
+            --experiment cyclistics-v2-end-to-end \
+            --table "$GITHUB_WORKSPACE/outputs/v2_demo/netlogo_behaviorspace.csv"
+          test -s "$GITHUB_WORKSPACE/outputs/v2_demo/v2_replay_trajectories.csv"
+          cd "$GITHUB_WORKSPACE"
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          lines = list(csv.reader(Path("outputs/v2_demo/netlogo_behaviorspace.csv").open()))
+          index = next(i for i,row in enumerate(lines) if row and row[0] == "[run number]")
+          result = dict(zip(lines[index], lines[index + 1]))
+          assert result["conservation-ok?"] == "true"
+          assert result["lane-spacing-ok?"] == "true"
+          assert int(result["observed-blocked-ticks"]) == 8
+          print("PASS: genuine NetLogo imported Python event CSV and blocked exactly eight model seconds")
+          PY
+
+      - name: Analyze real synthetic model trajectories
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=src python -m cyclistics.v2_conflicts \
+            --input outputs/v2_demo/v2_replay_trajectories.csv \
+            --outdir outputs/v2_demo/conflict_analysis
+          PYTHONPATH=src python -m cyclistics.v2_geojson \
+            --input examples/v2_no_geography.json \
+            --output outputs/v2_demo/no_geography.geojson
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary = json.loads(Path("outputs/v2_demo/conflict_analysis/summary.json").read_text())
+          geo = json.loads(Path("outputs/v2_demo/no_geography.geojson").read_text())
+          assert summary["trajectory_rows"] > 0
+          assert summary["field_validated"] is False
+          assert geo == {"type": "FeatureCollection", "features": []}
+          print("PASS: real model CSV analyzed; no physical street pin invented")
+          PY
+          node --check web/dashboard.js
+
+      - name: Archive original model data and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclistics-v2-offline-integrated-evidence
+          retention-days: 30
+          if-no-files-found: error
+          path: outputs/v2_demo/
