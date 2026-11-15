@@ -18,7 +18,7 @@ If the working tree is clean, use the feature branch:
 ~~~powershell
 git switch --track origin/feat/devs-event-inspector-policy-lab
 python -m pip install -e .
-python -m unittest tests.test_visual_lab -v
+python -m unittest discover -s tests -p test_visual_lab.py -v
 python -m cyclistics.visual_lab --rate 900 --seed 754 --horizon 300 --blockage-start 45 --blockage-duration 120 --early-clearance-duration 30 --output outputs/visual_lab.json
 python -m http.server 8000 --directory web
 ~~~
